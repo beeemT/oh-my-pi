@@ -37,7 +37,9 @@ export function createRulebookTool(rules: Rule[]): AgentTool<typeof rulebookSche
 	return {
 		name: "rulebook",
 		label: "Rulebook",
-		description: `Fetch the full content of a project rule by name. Use this when a rule listed in <available_rules> is relevant to your current task. Available: ${ruleNames.join(", ") || "(none)"}`,
+		description: `Fetch the full content of a project rule by name. Use this when a rule listed in <available_rules> is relevant to your current task. Available: ${
+			ruleNames.join(", ") || "(none)"
+		}`,
 		parameters: rulebookSchema,
 		execute: async (_toolCallId: string, { name }: { name: string }) => {
 			const rule = ruleMap.get(name);

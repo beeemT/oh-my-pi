@@ -6,8 +6,8 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import type { AssistantMessage, ImageContent, Message, OAuthProvider } from "@mariozechner/pi-ai";
 import type { AgentMessage, ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import type { AssistantMessage, ImageContent, Message, OAuthProvider } from "@oh-my-pi/pi-ai";
 import type { SlashCommand } from "@oh-my-pi/pi-tui";
 import {
 	CombinedAutocompleteProvider,
@@ -1560,7 +1560,10 @@ export class InteractiveMode {
 			case "fileMention": {
 				// Render compact file mention display
 				for (const file of message.files) {
-					const text = `${theme.fg("dim", `${theme.tree.hook} `)}${theme.fg("muted", "Read")} ${theme.fg("accent", file.path)} ${theme.fg("dim", `(${file.lineCount} lines)`)}`;
+					const text = `${theme.fg("dim", `${theme.tree.hook} `)}${theme.fg("muted", "Read")} ${theme.fg(
+						"accent",
+						file.path,
+					)} ${theme.fg("dim", `(${file.lineCount} lines)`)}`;
 					this.chatContainer.addChild(new Text(text, 0, 0));
 				}
 				break;

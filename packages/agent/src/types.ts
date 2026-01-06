@@ -8,7 +8,7 @@ import type {
 	TextContent,
 	Tool,
 	ToolResultMessage,
-} from "@oh-my-pi/pi-ai";
+} from "@mariozechner/pi-ai";
 import type { Static, TSchema } from "@sinclair/typebox";
 
 /** Stream function - can return sync or Promise for async config lookup */
@@ -28,6 +28,12 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	 * - "wait": defer steering until the current turn completes
 	 */
 	interruptMode?: "immediate" | "wait";
+
+	/**
+	 * Optional session identifier forwarded to LLM providers.
+	 * Used by providers that support session-based caching (e.g., OpenAI Codex).
+	 */
+	sessionId?: string;
 
 	/**
 	 * Converts AgentMessage[] to LLM-compatible Message[] before each LLM call.

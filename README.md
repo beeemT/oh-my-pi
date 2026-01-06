@@ -34,11 +34,13 @@ bun install -g @oh-my-pi/pi-coding-agent
 ### Via installer script
 
 **Linux / macOS:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/can1357/oh-my-pi/main/scripts/install.sh | sh
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 irm https://raw.githubusercontent.com/can1357/oh-my-pi/main/scripts/install.ps1 | iex
 ```
@@ -46,6 +48,7 @@ irm https://raw.githubusercontent.com/can1357/oh-my-pi/main/scripts/install.ps1 
 By default, the installer uses bun if available, otherwise downloads the prebuilt binary.
 
 Options:
+
 - `--source` / `-Source`: Install via bun (installs bun first if needed)
 - `--binary` / `-Binary`: Always use prebuilt binary
 - `--ref <ref>` / `-Ref <ref>`: Install a tag/commit/branch (defaults to source install)
@@ -249,7 +252,7 @@ Handles whitespace and indentation variance automatically:
 
 | Package                                                | Description                                                      |
 | ------------------------------------------------------ | ---------------------------------------------------------------- |
-| **[@oh-my-pi/pi-ai](packages/ai)**                     | Unified multi-provider LLM API (OpenAI, Anthropic, Google, etc.) |
+| **[@mariozechner/pi-ai](packages/ai)**                 | Unified multi-provider LLM API (OpenAI, Anthropic, Google, etc.) |
 | **[@oh-my-pi/pi-agent-core](packages/agent)**          | Agent runtime with tool calling and state management             |
 | **[@oh-my-pi/pi-coding-agent](packages/coding-agent)** | Interactive coding agent CLI                                     |
 | **[@oh-my-pi/pi-mom](packages/mom)**                   | Slack bot that delegates messages to the pi coding agent         |

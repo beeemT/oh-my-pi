@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Switched from local `@oh-my-pi/pi-ai` to upstream `@mariozechner/pi-ai` package
+
 ### Added
 
 - Added `webSearchProvider` setting to override auto-detection priority (Exa > Perplexity > Anthropic)
@@ -48,6 +52,7 @@
 - Fixed Linux ARM64 installs failing on fresh Debian when the `sharp` module is unavailable during session image compression
 
 ## [3.20.1] - 2026-01-06
+
 ### Fixed
 
 - Fixed find tool failing to match patterns with path separators (e.g., `reports/**`) by enabling full-path matching in fd
@@ -58,6 +63,7 @@
 - Changed ls tool to show relative modification times (e.g., "2d ago", "just now") for each entry
 
 ## [3.20.0] - 2026-01-06
+
 ### Added
 
 - Added extensions API with auto-discovery (`.omp/extensions`) and `--extension`/`-e` loading for custom tools, commands, and lifecycle hooks
@@ -197,6 +203,7 @@
 - Fixed session persistence to truncate oversized entries before writing JSONL to prevent out-of-memory errors
 
 ## [3.14.0] - 2026-01-04
+
 ### Added
 
 - Added `getUsageStatistics()` method to SessionManager for tracking cumulative token usage and costs across session messages
@@ -221,6 +228,7 @@
 - Fixed stale diagnostics persisting after file content changes in LSP client
 
 ## [3.8.1337] - 2026-01-04
+
 ### Added
 
 - Added automatic browser opening after exporting session to HTML
@@ -231,6 +239,7 @@
 - Fixed session titles not persisting to file when set before first flush
 
 ## [3.7.1337] - 2026-01-04
+
 ### Added
 
 - Added `EditMatchError` class for structured error handling in edit operations
@@ -289,6 +298,7 @@
 - Updated version update notification to suggest `omp update` instead of manual npm install command
 
 ## [3.1.1337] - 2026-01-03
+
 ### Added
 
 - Added `spawns` frontmatter field for agent definitions to control which sub-agents can be spawned
@@ -307,7 +317,7 @@
 - Added Discovery settings tab in interactive mode to enable/disable individual configuration providers
 - Added provider source attribution showing which tool contributed each configuration item
 - Added support for Cursor MDC rule format with frontmatter (description, globs, alwaysApply)
-- Added support for Windsurf rules from .windsurf/rules/*.md and global_rules.md
+- Added support for Windsurf rules from .windsurf/rules/\*.md and global_rules.md
 - Added support for Cline rules from .clinerules file or directory
 - Added support for GitHub Copilot instructions with applyTo glob patterns
 - Added support for Gemini extensions and system.md customization files
@@ -344,6 +354,7 @@
 - Removed separate asset copying steps from build scripts
 
 ## [2.0.1337] - 2026-01-03
+
 ### Added
 
 - Added shell environment snapshot to preserve user aliases, functions, and shell options when executing bash commands
@@ -356,6 +367,7 @@
 - Changed Edit tool to reject `.ipynb` files with guidance to use NotebookEdit tool instead
 
 ## [1.500.0] - 2026-01-03
+
 ### Added
 
 - Added provider tabs to model selector with Tab/Arrow navigation for filtering models by provider
@@ -417,6 +429,7 @@
 - Fixed Task tool showing "done + succeeded" when aborted; now correctly displays "⊘ aborted" status
 
 ## [1.341.0] - 2026-01-03
+
 ### Added
 
 - Added interruptMode setting to control when queued messages are processed during tool execution.
@@ -632,7 +645,7 @@ See [docs/custom-tools.md](docs/custom-tools.md) and [examples/custom-tools/](ex
 - `AppMessage` → `AgentMessage`
 - `sessionFile` returns `string | undefined` (was `string | null`)
 - `model` returns `Model | undefined` (was `Model | null`)
-- `Attachment` type removed. Use `ImageContent` from `@oh-my-pi/pi-ai` instead. Add images directly to message content arrays.
+- `Attachment` type removed. Use `ImageContent` from `@mariozechner/pi-ai` instead. Add images directly to message content arrays.
 
 **AgentSession API:**
 
@@ -858,7 +871,7 @@ Total color count increased from 46 to 50. See [docs/theme.md](docs/theme.md) fo
   - `createAgentSession()` now accepts `authStorage` and `modelRegistry` options
   - Removed `configureOAuthStorage()`, `defaultGetApiKey()`, `findModel()`, `discoverAvailableModels()`
   - Removed `getApiKey` callback option (use `AuthStorage.setRuntimeApiKey()` for runtime overrides)
-  - Use `getModel()` from `@oh-my-pi/pi-ai` for built-in models, `modelRegistry.find()` for custom models + built-in models
+  - Use `getModel()` from `@mariozechner/pi-ai` for built-in models, `modelRegistry.find()` for custom models + built-in models
   - See updated [SDK documentation](docs/sdk.md) and [README](README.md)
 
 - **Settings changes**: Removed `apiKeys` from `settings.json`. Use `auth.json` instead. ([#296](https://github.com/badlogic/pi-mono/issues/296))
@@ -1161,7 +1174,7 @@ Total color count increased from 46 to 50. See [docs/theme.md](docs/theme.md) fo
   - `rpc.md`: Added missing `hook_error` event documentation
   - `README.md`: Complete settings table, condensed philosophy section, standardized OAuth docs
 
-- Hooks loader now supports same import aliases as custom tools (`@sinclair/typebox`, `@oh-my-pi/pi-ai`, `@oh-my-pi/pi-tui`, `@oh-my-pi/pi-coding-agent`).
+- Hooks loader now supports same import aliases as custom tools (`@sinclair/typebox`, `@mariozechner/pi-ai`, `@oh-my-pi/pi-tui`, `@oh-my-pi/pi-coding-agent`).
 
 ### Breaking Changes
 
@@ -1183,7 +1196,7 @@ Total color count increased from 46 to 50. See [docs/theme.md](docs/theme.md) fo
 
 - Fixed TUI performance regression caused by Box component lacking render caching. Built-in tools now use Text directly (like v0.22.5), and Box has proper caching for custom tool rendering.
 
-- Fixed custom tools failing to load from `~/.omp/agent/tools/` when omp is installed globally. Module imports (`@sinclair/typebox`, `@oh-my-pi/pi-tui`, `@oh-my-pi/pi-ai`) are now resolved via aliases.
+- Fixed custom tools failing to load from `~/.omp/agent/tools/` when omp is installed globally. Module imports (`@sinclair/typebox`, `@oh-my-pi/pi-tui`, `@mariozechner/pi-ai`) are now resolved via aliases.
 
 ## [0.23.0] - 2025-12-17
 
@@ -1223,7 +1236,7 @@ Total color count increased from 46 to 50. See [docs/theme.md](docs/theme.md) fo
 
 - **Tool output display**: When collapsed, tool output now shows the last N lines instead of the first N lines, making streaming output more useful.
 
-- Updated `@oh-my-pi/pi-ai` with X-Initiator header support for GitHub Copilot, ensuring agent calls are not deducted from quota. ([#200](https://github.com/badlogic/pi-mono/pull/200) by [@kim0](https://github.com/kim0))
+- Updated `@mariozechner/pi-ai` with X-Initiator header support for GitHub Copilot, ensuring agent calls are not deducted from quota. ([#200](https://github.com/badlogic/pi-mono/pull/200) by [@kim0](https://github.com/kim0))
 
 ### Fixed
 
@@ -1235,7 +1248,7 @@ Total color count increased from 46 to 50. See [docs/theme.md](docs/theme.md) fo
 
 ### Changed
 
-- Updated `@oh-my-pi/pi-ai` with interleaved thinking enabled by default for Anthropic Claude 4 models.
+- Updated `@mariozechner/pi-ai` with interleaved thinking enabled by default for Anthropic Claude 4 models.
 
 ## [0.22.1] - 2025-12-15
 
@@ -1243,7 +1256,7 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 
 ### Changed
 
-- Updated `@oh-my-pi/pi-ai` with interleaved thinking support for Anthropic models.
+- Updated `@mariozechner/pi-ai` with interleaved thinking support for Anthropic models.
 
 ## [0.22.0] - 2025-12-15
 

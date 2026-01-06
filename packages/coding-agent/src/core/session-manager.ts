@@ -13,8 +13,8 @@ import {
 	type WriteStream,
 } from "node:fs";
 import { basename, join, resolve } from "node:path";
+import type { ImageContent, Message, TextContent, Usage } from "@mariozechner/pi-ai";
 import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
-import type { ImageContent, Message, TextContent, Usage } from "@oh-my-pi/pi-ai";
 import { nanoid } from "nanoid";
 import { getAgentDir as getDefaultAgentDir } from "../config";
 import { resizeImage } from "../utils/image-resize";

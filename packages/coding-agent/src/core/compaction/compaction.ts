@@ -5,9 +5,9 @@
  * and after compaction the session is reloaded.
  */
 
+import type { AssistantMessage, Model, Usage } from "@mariozechner/pi-ai";
+import { complete, completeSimple } from "@mariozechner/pi-ai";
 import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
-import type { AssistantMessage, Model, Usage } from "@oh-my-pi/pi-ai";
-import { complete, completeSimple } from "@oh-my-pi/pi-ai";
 import compactionSummaryPrompt from "../../prompts/compaction-summary.md" with { type: "text" };
 import compactionTurnPrefixPrompt from "../../prompts/compaction-turn-prefix.md" with { type: "text" };
 import compactionUpdateSummaryPrompt from "../../prompts/compaction-update-summary.md" with { type: "text" };

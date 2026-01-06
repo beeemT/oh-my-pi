@@ -1,4 +1,4 @@
-import { type Model, modelsAreEqual } from "@oh-my-pi/pi-ai";
+import { type Model, modelsAreEqual } from "@mariozechner/pi-ai";
 import {
 	Container,
 	Input,

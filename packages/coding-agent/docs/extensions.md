@@ -5,6 +5,7 @@
 Extensions are TypeScript modules that extend pi's behavior. They can subscribe to lifecycle events, register custom tools callable by the LLM, add commands, and more.
 
 **Key capabilities:**
+
 - **Custom tools** - Register tools the LLM can call via `pi.registerTool()`
 - **Event interception** - Block or modify tool calls, inject context, customize compaction
 - **User interaction** - Prompt users via `ctx.ui` (select, confirm, input, notify)
@@ -14,6 +15,7 @@ Extensions are TypeScript modules that extend pi's behavior. They can subscribe 
 - **Custom rendering** - Control how tool calls/results and messages appear in TUI
 
 **Example use cases:**
+
 - Permission gates (confirm before `rm -rf`, `sudo`, etc.)
 - Git checkpointing (stash at each turn, restore on branch)
 - Path protection (block writes to `.env`, `node_modules/`)
@@ -55,41 +57,41 @@ import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {
-  // React to events
-  pi.on("session_start", async (_event, ctx) => {
-    ctx.ui.notify("Extension loaded!", "info");
-  });
+	// React to events
+	pi.on("session_start", async (_event, ctx) => {
+		ctx.ui.notify("Extension loaded!", "info");
+	});
 
-  pi.on("tool_call", async (event, ctx) => {
-    if (event.toolName === "bash" && event.input.command?.includes("rm -rf")) {
-      const ok = await ctx.ui.confirm("Dangerous!", "Allow rm -rf?");
-      if (!ok) return { block: true, reason: "Blocked by user" };
-    }
-  });
+	pi.on("tool_call", async (event, ctx) => {
+		if (event.toolName === "bash" && event.input.command?.includes("rm -rf")) {
+			const ok = await ctx.ui.confirm("Dangerous!", "Allow rm -rf?");
+			if (!ok) return { block: true, reason: "Blocked by user" };
+		}
+	});
 
-  // Register a custom tool
-  pi.registerTool({
-    name: "greet",
-    label: "Greet",
-    description: "Greet someone by name",
-    parameters: Type.Object({
-      name: Type.String({ description: "Name to greet" }),
-    }),
-    async execute(toolCallId, params, onUpdate, ctx, signal) {
-      return {
-        content: [{ type: "text", text: `Hello, ${params.name}!` }],
-        details: {},
-      };
-    },
-  });
+	// Register a custom tool
+	pi.registerTool({
+		name: "greet",
+		label: "Greet",
+		description: "Greet someone by name",
+		parameters: Type.Object({
+			name: Type.String({ description: "Name to greet" }),
+		}),
+		async execute(toolCallId, params, onUpdate, ctx, signal) {
+			return {
+				content: [{ type: "text", text: `Hello, ${params.name}!` }],
+				details: {},
+			};
+		},
+	});
 
-  // Register a command
-  pi.registerCommand("hello", {
-    description: "Say hello",
-    handler: async (args, ctx) => {
-      ctx.ui.notify(`Hello ${args || "world"}!`, "info");
-    },
-  });
+	// Register a command
+	pi.registerCommand("hello", {
+		description: "Say hello",
+		handler: async (args, ctx) => {
+			ctx.ui.notify(`Hello ${args || "world"}!`, "info");
+		},
+	});
 }
 ```
 
@@ -103,12 +105,12 @@ pi -e ./my-extension.ts
 
 Extensions are auto-discovered from:
 
-| Location | Scope |
-|----------|-------|
-| `~/.omp/agent/extensions/*.ts` | Global (all projects) |
-| `~/.omp/agent/extensions/*/index.ts` | Global (subdirectory) |
-| `.omp/extensions/*.ts` | Project-local |
-| `.omp/extensions/*/index.ts` | Project-local (subdirectory) |
+| Location                             | Scope                        |
+| ------------------------------------ | ---------------------------- |
+| `~/.omp/agent/extensions/*.ts`       | Global (all projects)        |
+| `~/.omp/agent/extensions/*/index.ts` | Global (subdirectory)        |
+| `.omp/extensions/*.ts`               | Project-local                |
+| `.omp/extensions/*/index.ts`         | Project-local (subdirectory) |
 
 Legacy `.pi` directories are supported as aliases for the `.omp` paths above.
 
@@ -116,7 +118,7 @@ Additional paths via `settings.json`:
 
 ```json
 {
-  "extensions": ["/path/to/extension.ts", "/path/to/extension/dir"]
+	"extensions": ["/path/to/extension.ts", "/path/to/extension/dir"]
 }
 ```
 
@@ -142,17 +144,18 @@ Additional paths via `settings.json`:
 ```json
 // my-extension-pack/package.json
 {
-  "name": "my-extension-pack",
-  "dependencies": {
-    "zod": "^3.0.0"
-  },
-  "omp": {
-    "extensions": ["./src/safety-gates.ts", "./src/custom-tools.ts"]
-  }
+	"name": "my-extension-pack",
+	"dependencies": {
+		"zod": "^3.0.0"
+	},
+	"omp": {
+		"extensions": ["./src/safety-gates.ts", "./src/custom-tools.ts"]
+	}
 }
 ```
 
 The `package.json` approach enables:
+
 - Multiple extensions from one package
 - Third-party npm dependencies (resolved via jiti)
 - Nested source structure (no depth limit within the package)
@@ -160,12 +163,12 @@ The `package.json` approach enables:
 
 ## Available Imports
 
-| Package | Purpose |
-|---------|---------|
+| Package                     | Purpose                                                      |
+| --------------------------- | ------------------------------------------------------------ |
 | `@oh-my-pi/pi-coding-agent` | Extension types (`ExtensionAPI`, `ExtensionContext`, events) |
-| `@sinclair/typebox` | Schema definitions for tool parameters |
-| `@oh-my-pi/pi-ai` | AI utilities (`StringEnum` for Google-compatible enums) |
-| `@oh-my-pi/pi-tui` | TUI components for custom rendering |
+| `@sinclair/typebox`         | Schema definitions for tool parameters                       |
+| `@mariozechner/pi-ai`       | AI utilities (`StringEnum` for Google-compatible enums)      |
+| `@oh-my-pi/pi-tui`          | TUI components for custom rendering                          |
 
 npm dependencies work too. Add a `package.json` next to your extension (or in a parent directory), run `npm install`, and imports from `node_modules/` are resolved automatically.
 
@@ -232,14 +235,14 @@ Extensions are loaded via [jiti](https://github.com/unjs/jiti), so TypeScript wo
 ```json
 // package.json
 {
-  "name": "my-extension",
-  "dependencies": {
-    "zod": "^3.0.0",
-    "chalk": "^5.0.0"
-  },
-  "pi": {
-    "extensions": ["./src/index.ts"]
-  }
+	"name": "my-extension",
+	"dependencies": {
+		"zod": "^3.0.0",
+		"chalk": "^5.0.0"
+	},
+	"pi": {
+		"extensions": ["./src/index.ts"]
+	}
 }
 ```
 
@@ -304,7 +307,7 @@ Fired on initial session load.
 
 ```typescript
 pi.on("session_start", async (_event, ctx) => {
-  ctx.ui.notify(`Session: ${ctx.sessionManager.getSessionFile() ?? "ephemeral"}`, "info");
+	ctx.ui.notify(`Session: ${ctx.sessionManager.getSessionFile() ?? "ephemeral"}`, "info");
 });
 ```
 
@@ -314,18 +317,18 @@ Fired when starting a new session (`/new`) or switching sessions (`/resume`).
 
 ```typescript
 pi.on("session_before_switch", async (event, ctx) => {
-  // event.reason - "new" or "resume"
-  // event.targetSessionFile - session we're switching to (only for "resume")
+	// event.reason - "new" or "resume"
+	// event.targetSessionFile - session we're switching to (only for "resume")
 
-  if (event.reason === "new") {
-    const ok = await ctx.ui.confirm("Clear?", "Delete all messages?");
-    if (!ok) return { cancel: true };
-  }
+	if (event.reason === "new") {
+		const ok = await ctx.ui.confirm("Clear?", "Delete all messages?");
+		if (!ok) return { cancel: true };
+	}
 });
 
 pi.on("session_switch", async (event, ctx) => {
-  // event.reason - "new" or "resume"
-  // event.previousSessionFile - session we came from
+	// event.reason - "new" or "resume"
+	// event.previousSessionFile - session we came from
 });
 ```
 
@@ -335,14 +338,14 @@ Fired when branching via `/branch`.
 
 ```typescript
 pi.on("session_before_branch", async (event, ctx) => {
-  // event.entryId - ID of the entry being branched from
-  return { cancel: true }; // Cancel branch
-  // OR
-  return { skipConversationRestore: true }; // Branch but don't rewind messages
+	// event.entryId - ID of the entry being branched from
+	return { cancel: true }; // Cancel branch
+	// OR
+	return { skipConversationRestore: true }; // Branch but don't rewind messages
 });
 
 pi.on("session_branch", async (event, ctx) => {
-  // event.previousSessionFile - previous session file
+	// event.previousSessionFile - previous session file
 });
 ```
 
@@ -352,24 +355,24 @@ Fired on compaction. See [compaction.md](compaction.md) for details.
 
 ```typescript
 pi.on("session_before_compact", async (event, ctx) => {
-  const { preparation, branchEntries, customInstructions, signal } = event;
+	const { preparation, branchEntries, customInstructions, signal } = event;
 
-  // Cancel:
-  return { cancel: true };
+	// Cancel:
+	return { cancel: true };
 
-  // Custom summary:
-  return {
-    compaction: {
-      summary: "...",
-      firstKeptEntryId: preparation.firstKeptEntryId,
-      tokensBefore: preparation.tokensBefore,
-    }
-  };
+	// Custom summary:
+	return {
+		compaction: {
+			summary: "...",
+			firstKeptEntryId: preparation.firstKeptEntryId,
+			tokensBefore: preparation.tokensBefore,
+		},
+	};
 });
 
 pi.on("session_compact", async (event, ctx) => {
-  // event.compactionEntry - the saved compaction
-  // event.fromExtension - whether extension provided it
+	// event.compactionEntry - the saved compaction
+	// event.fromExtension - whether extension provided it
 });
 ```
 
@@ -379,14 +382,14 @@ Fired on `/tree` navigation.
 
 ```typescript
 pi.on("session_before_tree", async (event, ctx) => {
-  const { preparation, signal } = event;
-  return { cancel: true };
-  // OR provide custom summary:
-  return { summary: { summary: "...", details: {} } };
+	const { preparation, signal } = event;
+	return { cancel: true };
+	// OR provide custom summary:
+	return { summary: { summary: "...", details: {} } };
 });
 
 pi.on("session_tree", async (event, ctx) => {
-  // event.newLeafId, oldLeafId, summaryEntry, fromExtension
+	// event.newLeafId, oldLeafId, summaryEntry, fromExtension
 });
 ```
 
@@ -396,7 +399,7 @@ Fired on exit (Ctrl+C, Ctrl+D, SIGTERM).
 
 ```typescript
 pi.on("session_shutdown", async (_event, ctx) => {
-  // Cleanup, save state, etc.
+	// Cleanup, save state, etc.
 });
 ```
 
@@ -408,19 +411,19 @@ Fired after user submits prompt, before agent loop. Can inject a message and/or 
 
 ```typescript
 pi.on("before_agent_start", async (event, ctx) => {
-  // event.prompt - user's prompt text
-  // event.images - attached images (if any)
+	// event.prompt - user's prompt text
+	// event.images - attached images (if any)
 
-  return {
-    // Inject a persistent message (stored in session, sent to LLM)
-    message: {
-      customType: "my-extension",
-      content: "Additional context for the LLM",
-      display: true,
-    },
-    // Append to system prompt for this turn only
-    systemPromptAppend: "Extra instructions for this turn...",
-  };
+	return {
+		// Inject a persistent message (stored in session, sent to LLM)
+		message: {
+			customType: "my-extension",
+			content: "Additional context for the LLM",
+			display: true,
+		},
+		// Append to system prompt for this turn only
+		systemPromptAppend: "Extra instructions for this turn...",
+	};
 });
 ```
 
@@ -432,7 +435,7 @@ Fired once per user prompt.
 pi.on("agent_start", async (_event, ctx) => {});
 
 pi.on("agent_end", async (event, ctx) => {
-  // event.messages - messages from this prompt
+	// event.messages - messages from this prompt
 });
 ```
 
@@ -442,11 +445,11 @@ Fired for each turn (one LLM response + tool calls).
 
 ```typescript
 pi.on("turn_start", async (event, ctx) => {
-  // event.turnIndex, event.timestamp
+	// event.turnIndex, event.timestamp
 });
 
 pi.on("turn_end", async (event, ctx) => {
-  // event.turnIndex, event.message, event.toolResults
+	// event.turnIndex, event.message, event.toolResults
 });
 ```
 
@@ -456,9 +459,9 @@ Fired before each LLM call. Modify messages non-destructively.
 
 ```typescript
 pi.on("context", async (event, ctx) => {
-  // event.messages - deep copy, safe to modify
-  const filtered = event.messages.filter(m => !shouldPrune(m));
-  return { messages: filtered };
+	// event.messages - deep copy, safe to modify
+	const filtered = event.messages.filter((m) => !shouldPrune(m));
+	return { messages: filtered };
 });
 ```
 
@@ -470,13 +473,13 @@ Fired before tool executes. **Can block.**
 
 ```typescript
 pi.on("tool_call", async (event, ctx) => {
-  // event.toolName - "bash", "read", "write", "edit", etc.
-  // event.toolCallId
-  // event.input - tool parameters
+	// event.toolName - "bash", "read", "write", "edit", etc.
+	// event.toolCallId
+	// event.input - tool parameters
 
-  if (shouldBlock(event)) {
-    return { block: true, reason: "Not allowed" };
-  }
+	if (shouldBlock(event)) {
+		return { block: true, reason: "Not allowed" };
+	}
 });
 ```
 
@@ -521,9 +524,9 @@ Current working directory.
 Read-only access to session state:
 
 ```typescript
-ctx.sessionManager.getEntries()       // All entries
-ctx.sessionManager.getBranch()        // Current branch
-ctx.sessionManager.getLeafId()        // Current leaf entry ID
+ctx.sessionManager.getEntries(); // All entries
+ctx.sessionManager.getBranch(); // Current branch
+ctx.sessionManager.getLeafId(); // Current leaf entry ID
 ```
 
 ### ctx.modelRegistry / ctx.model
@@ -544,10 +547,10 @@ Wait for the agent to finish streaming:
 
 ```typescript
 pi.registerCommand("my-cmd", {
-  handler: async (args, ctx) => {
-    await ctx.waitForIdle();
-    // Agent is now idle, safe to modify session
-  },
+	handler: async (args, ctx) => {
+		await ctx.waitForIdle();
+		// Agent is now idle, safe to modify session
+	},
 });
 ```
 
@@ -557,18 +560,18 @@ Create a new session:
 
 ```typescript
 const result = await ctx.newSession({
-  parentSession: ctx.sessionManager.getSessionFile(),
-  setup: async (sm) => {
-    sm.appendMessage({
-      role: "user",
-      content: [{ type: "text", text: "Context from previous session..." }],
-      timestamp: Date.now(),
-    });
-  },
+	parentSession: ctx.sessionManager.getSessionFile(),
+	setup: async (sm) => {
+		sm.appendMessage({
+			role: "user",
+			content: [{ type: "text", text: "Context from previous session..." }],
+			timestamp: Date.now(),
+		});
+	},
 });
 
 if (result.cancelled) {
-  // An extension cancelled the new session
+	// An extension cancelled the new session
 }
 ```
 
@@ -579,7 +582,7 @@ Branch from a specific entry:
 ```typescript
 const result = await ctx.branch("entry-id-123");
 if (!result.cancelled) {
-  // Now in the branched session
+	// Now in the branched session
 }
 ```
 
@@ -589,7 +592,7 @@ Navigate to a different point in the session tree:
 
 ```typescript
 const result = await ctx.navigateTree("entry-id-456", {
-  summarize: true,
+	summarize: true,
 });
 ```
 
@@ -605,7 +608,7 @@ Register a custom tool callable by the LLM. See [Custom Tools](#custom-tools) fo
 
 ```typescript
 import { Type } from "@sinclair/typebox";
-import { StringEnum } from "@oh-my-pi/pi-ai";
+import { StringEnum } from "@mariozechner/pi-ai";
 
 pi.registerTool({
   name: "my_tool",
@@ -649,6 +652,7 @@ pi.sendMessage({
 ```
 
 **Options:**
+
 - `deliverAs` - Delivery mode:
   - `"steer"` (default) - Interrupts streaming. Delivered after current tool finishes, remaining tools skipped.
   - `"followUp"` - Waits for agent to finish. Delivered only when agent has no more tool calls.
@@ -664,11 +668,11 @@ pi.appendEntry("my-state", { count: 42 });
 
 // Restore on reload
 pi.on("session_start", async (_event, ctx) => {
-  for (const entry of ctx.sessionManager.getEntries()) {
-    if (entry.type === "custom" && entry.customType === "my-state") {
-      // Reconstruct from entry.data
-    }
-  }
+	for (const entry of ctx.sessionManager.getEntries()) {
+		if (entry.type === "custom" && entry.customType === "my-state") {
+			// Reconstruct from entry.data
+		}
+	}
 });
 ```
 
@@ -678,11 +682,11 @@ Register a command:
 
 ```typescript
 pi.registerCommand("stats", {
-  description: "Show session statistics",
-  handler: async (args, ctx) => {
-    const count = ctx.sessionManager.getEntries().length;
-    ctx.ui.notify(`${count} entries`, "info");
-  }
+	description: "Show session statistics",
+	handler: async (args, ctx) => {
+		const count = ctx.sessionManager.getEntries().length;
+		ctx.ui.notify(`${count} entries`, "info");
+	},
 });
 ```
 
@@ -696,10 +700,10 @@ Register a keyboard shortcut:
 
 ```typescript
 pi.registerShortcut("ctrl+shift+p", {
-  description: "Toggle plan mode",
-  handler: async (ctx) => {
-    ctx.ui.notify("Toggled!");
-  },
+	description: "Toggle plan mode",
+	handler: async (ctx) => {
+		ctx.ui.notify("Toggled!");
+	},
 });
 ```
 
@@ -709,14 +713,14 @@ Register a CLI flag:
 
 ```typescript
 pi.registerFlag("--plan", {
-  description: "Start in plan mode",
-  type: "boolean",
-  default: false,
+	description: "Start in plan mode",
+	type: "boolean",
+	default: false,
 });
 
 // Check value
 if (pi.getFlag("--plan")) {
-  // Plan mode enabled
+	// Plan mode enabled
 }
 ```
 
@@ -734,7 +738,7 @@ const result = await pi.exec("git", ["status"], { signal, timeout: 5000 });
 Manage active tools:
 
 ```typescript
-const active = pi.getActiveTools();  // ["read", "bash", "edit", "write"]
+const active = pi.getActiveTools(); // ["read", "bash", "edit", "write"]
 pi.setActiveTools(["read", "bash"]); // Switch to read-only
 ```
 
@@ -753,31 +757,31 @@ Extensions with state should store it in tool result `details` for proper branch
 
 ```typescript
 export default function (pi: ExtensionAPI) {
-  let items: string[] = [];
+	let items: string[] = [];
 
-  // Reconstruct state from session
-  pi.on("session_start", async (_event, ctx) => {
-    items = [];
-    for (const entry of ctx.sessionManager.getBranch()) {
-      if (entry.type === "message" && entry.message.role === "toolResult") {
-        if (entry.message.toolName === "my_tool") {
-          items = entry.message.details?.items ?? [];
-        }
-      }
-    }
-  });
+	// Reconstruct state from session
+	pi.on("session_start", async (_event, ctx) => {
+		items = [];
+		for (const entry of ctx.sessionManager.getBranch()) {
+			if (entry.type === "message" && entry.message.role === "toolResult") {
+				if (entry.message.toolName === "my_tool") {
+					items = entry.message.details?.items ?? [];
+				}
+			}
+		}
+	});
 
-  pi.registerTool({
-    name: "my_tool",
-    // ...
-    async execute(toolCallId, params, onUpdate, ctx, signal) {
-      items.push("new item");
-      return {
-        content: [{ type: "text", text: "Added" }],
-        details: { items: [...items] },  // Store for reconstruction
-      };
-    },
-  });
+	pi.registerTool({
+		name: "my_tool",
+		// ...
+		async execute(toolCallId, params, onUpdate, ctx, signal) {
+			items.push("new item");
+			return {
+				content: [{ type: "text", text: "Added" }],
+				details: { items: [...items] }, // Store for reconstruction
+			};
+		},
+	});
 }
 ```
 
@@ -789,7 +793,7 @@ Register tools the LLM can call via `pi.registerTool()`. Tools appear in the sys
 
 ```typescript
 import { Type } from "@sinclair/typebox";
-import { StringEnum } from "@oh-my-pi/pi-ai";
+import { StringEnum } from "@mariozechner/pi-ai";
 import { Text } from "@oh-my-pi/pi-tui";
 
 pi.registerTool({
@@ -829,7 +833,7 @@ pi.registerTool({
 });
 ```
 
-**Important:** Use `StringEnum` from `@oh-my-pi/pi-ai` for string enums. `Type.Union`/`Type.Literal` doesn't work with Google's API.
+**Important:** Use `StringEnum` from `@mariozechner/pi-ai` for string enums. `Type.Union`/`Type.Literal` doesn't work with Google's API.
 
 ### Multiple Tools
 
@@ -910,6 +914,7 @@ renderResult(result, { expanded, isPartial }, theme) {
 #### Fallback
 
 If `renderCall`/`renderResult` is not defined or throws:
+
 - `renderCall`: Shows tool name
 - `renderResult`: Shows raw text from `content`
 
@@ -933,7 +938,7 @@ const name = await ctx.ui.input("Name:", "placeholder");
 const text = await ctx.ui.editor("Edit:", "prefilled text");
 
 // Notification (non-blocking)
-ctx.ui.notify("Done!", "info");  // "info" | "warning" | "error"
+ctx.ui.notify("Done!", "info"); // "info" | "warning" | "error"
 ```
 
 ### Widgets and Status
@@ -941,12 +946,12 @@ ctx.ui.notify("Done!", "info");  // "info" | "warning" | "error"
 ```typescript
 // Status in footer (persistent until cleared)
 ctx.ui.setStatus("my-ext", "Processing...");
-ctx.ui.setStatus("my-ext", undefined);  // Clear
+ctx.ui.setStatus("my-ext", undefined); // Clear
 
 // Widget above editor (string array or factory function)
 ctx.ui.setWidget("my-widget", ["Line 1", "Line 2"]);
 ctx.ui.setWidget("my-widget", (tui, theme) => new Text(theme.fg("accent", "Custom"), 0, 0));
-ctx.ui.setWidget("my-widget", undefined);  // Clear
+ctx.ui.setWidget("my-widget", undefined); // Clear
 
 // Terminal title
 ctx.ui.setTitle("pi - my-project");
@@ -964,23 +969,24 @@ For complex UI, use `ctx.ui.custom()`. This temporarily replaces the editor with
 import { Text, Component } from "@oh-my-pi/pi-tui";
 
 const result = await ctx.ui.custom<boolean>((tui, theme, done) => {
-  const text = new Text("Press Enter to confirm, Escape to cancel", 1, 1);
+	const text = new Text("Press Enter to confirm, Escape to cancel", 1, 1);
 
-  text.onKey = (key) => {
-    if (key === "return") done(true);
-    if (key === "escape") done(false);
-    return true;
-  };
+	text.onKey = (key) => {
+		if (key === "return") done(true);
+		if (key === "escape") done(false);
+		return true;
+	};
 
-  return text;
+	return text;
 });
 
 if (result) {
-  // User pressed Enter
+	// User pressed Enter
 }
 ```
 
 The callback receives:
+
 - `tui` - TUI instance (for screen dimensions, focus management)
 - `theme` - Current theme for styling
 - `done(value)` - Call to close component and return value
@@ -995,15 +1001,15 @@ Register a custom renderer for messages with your `customType`:
 import { Text } from "@oh-my-pi/pi-tui";
 
 pi.registerMessageRenderer("my-extension", (message, options, theme) => {
-  const { expanded } = options;
-  let text = theme.fg("accent", `[${message.customType}] `);
-  text += message.content;
+	const { expanded } = options;
+	let text = theme.fg("accent", `[${message.customType}] `);
+	text += message.content;
 
-  if (expanded && message.details) {
-    text += "\n" + theme.fg("dim", JSON.stringify(message.details, null, 2));
-  }
+	if (expanded && message.details) {
+		text += "\n" + theme.fg("dim", JSON.stringify(message.details, null, 2));
+	}
 
-  return new Text(text, 0, 0);
+	return new Text(text, 0, 0);
 });
 ```
 
@@ -1024,18 +1030,18 @@ All render functions receive a `theme` object:
 
 ```typescript
 // Foreground colors
-theme.fg("toolTitle", text)   // Tool names
-theme.fg("accent", text)      // Highlights
-theme.fg("success", text)     // Success (green)
-theme.fg("error", text)       // Errors (red)
-theme.fg("warning", text)     // Warnings (yellow)
-theme.fg("muted", text)       // Secondary text
-theme.fg("dim", text)         // Tertiary text
+theme.fg("toolTitle", text); // Tool names
+theme.fg("accent", text); // Highlights
+theme.fg("success", text); // Success (green)
+theme.fg("error", text); // Errors (red)
+theme.fg("warning", text); // Warnings (yellow)
+theme.fg("muted", text); // Secondary text
+theme.fg("dim", text); // Tertiary text
 
 // Text styles
-theme.bold(text)
-theme.italic(text)
-theme.strikethrough(text)
+theme.bold(text);
+theme.italic(text);
+theme.strikethrough(text);
 ```
 
 ## Error Handling
@@ -1046,10 +1052,10 @@ theme.strikethrough(text)
 
 ## Mode Behavior
 
-| Mode | UI Methods | Notes |
-|------|-----------|-------|
-| Interactive | Full TUI | Normal operation |
-| RPC | JSON protocol | Host handles UI |
-| Print (`-p`) | No-op | Extensions run but can't prompt |
+| Mode         | UI Methods    | Notes                           |
+| ------------ | ------------- | ------------------------------- |
+| Interactive  | Full TUI      | Normal operation                |
+| RPC          | JSON protocol | Host handles UI                 |
+| Print (`-p`) | No-op         | Extensions run but can't prompt |
 
 In print mode, check `ctx.hasUI` before using UI methods.

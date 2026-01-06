@@ -2,8 +2,8 @@
  * Tool wrappers for extensions.
  */
 
+import type { ImageContent, TextContent } from "@mariozechner/pi-ai";
 import type { AgentTool, AgentToolContext, AgentToolUpdateCallback } from "@oh-my-pi/pi-agent-core";
-import type { ImageContent, TextContent } from "@oh-my-pi/pi-ai";
 import type { Theme } from "../../modes/interactive/theme/theme";
 import type { ExtensionRunner } from "./runner";
 import type { ExtensionContext, RegisteredTool, ToolCallEventResult, ToolResultEventResult } from "./types";

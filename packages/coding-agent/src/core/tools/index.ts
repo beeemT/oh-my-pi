@@ -24,12 +24,7 @@ export { createNotebookTool, type NotebookToolDetails, notebookTool } from "./no
 export { createOutputTool, type OutputToolDetails, outputTool } from "./output";
 export { createReadTool, type ReadToolDetails, type ReadToolOptions, readTool } from "./read";
 export { createReportFindingTool, createSubmitReviewTool, reportFindingTool, submitReviewTool } from "./review";
-export {
-	createRulebookTool,
-	filterRulebookRules,
-	formatRulesForPrompt,
-	type RulebookToolDetails,
-} from "./rulebook";
+export { createRulebookTool, filterRulebookRules, formatRulesForPrompt, type RulebookToolDetails } from "./rulebook";
 export { BUNDLED_AGENTS, createTaskTool, taskTool } from "./task/index";
 export type { TruncationResult } from "./truncate";
 export { createWebFetchTool, type WebFetchToolDetails, webFetchCustomTool, webFetchTool } from "./web-fetch";

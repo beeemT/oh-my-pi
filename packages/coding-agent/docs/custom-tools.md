@@ -65,8 +65,8 @@ Tools must be in a subdirectory with an `index.ts` entry point:
 
 | Location                            | Scope                 | Auto-discovered |
 | ----------------------------------- | --------------------- | --------------- |
-| `~/.omp/agent/tools/*/index.ts`      | Global (all projects) | Yes             |
-| `.omp/tools/*/index.ts`              | Project-local         | Yes             |
+| `~/.omp/agent/tools/*/index.ts`     | Global (all projects) | Yes             |
+| `.omp/tools/*/index.ts`             | Project-local         | Yes             |
 | `settings.json` `customTools` array | Configured paths      | Yes             |
 | `--tool <path>` CLI flag            | One-off/debugging     | No              |
 
@@ -94,7 +94,7 @@ Custom tools can import from these packages:
 | --------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
 | `@sinclair/typebox`         | Schema definitions (`Type.Object`, `Type.String`, etc.)   | Via `pi.typebox.*` (injected)                       |
 | `@oh-my-pi/pi-coding-agent` | Types and utilities                                       | Via `pi.pi.*` (injected) or direct import for types |
-| `@oh-my-pi/pi-ai`           | AI utilities (`StringEnum` for Google-compatible enums)   | Via `pi.pi.*` (re-exported through coding-agent)    |
+| `@mariozechner/pi-ai`       | AI utilities (`StringEnum` for Google-compatible enums)   | Via `pi.pi.*` (re-exported through coding-agent)    |
 | `@oh-my-pi/pi-tui`          | TUI components (`Text`, `Box`, etc. for custom rendering) | Via `pi.pi.*` (re-exported through coding-agent)    |
 
 Node.js built-in modules (`node:fs`, `node:path`, etc.) are also available.

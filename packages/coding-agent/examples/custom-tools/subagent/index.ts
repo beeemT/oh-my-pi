@@ -15,8 +15,8 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import type { Message } from "@mariozechner/pi-ai";
 import type { AgentToolResult } from "@oh-my-pi/pi-agent-core";
-import type { Message } from "@oh-my-pi/pi-ai";
 import type { CustomTool, CustomToolAPI, CustomToolFactory } from "@oh-my-pi/pi-coding-agent";
 import { type AgentConfig, type AgentScope, discoverAgents, formatAgentList } from "./agents";
 

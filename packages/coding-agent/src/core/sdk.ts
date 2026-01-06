@@ -27,8 +27,8 @@
  */
 
 import { join } from "node:path";
+import type { Model } from "@mariozechner/pi-ai";
 import { Agent, type AgentTool, type ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import type { Model } from "@oh-my-pi/pi-ai";
 import type { Component } from "@oh-my-pi/pi-tui";
 import chalk from "chalk";
 // Import discovery to register all providers on startup
@@ -493,7 +493,7 @@ function createCustomToolsExtension(tools: CustomTool[]): ExtensionFactory {
  * const { session } = await createAgentSession();
  *
  * // With explicit model
- * import { getModel } from '@oh-my-pi/pi-ai';
+ * import { getModel } from '@mariozechner/pi-ai';
  * const { session } = await createAgentSession({
  *   model: getModel('anthropic', 'claude-opus-4-5'),
  *   thinkingLevel: 'high',

@@ -5,8 +5,8 @@
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { getModel } from "@mariozechner/pi-ai";
 import { Agent } from "@oh-my-pi/pi-agent-core";
-import { getModel } from "@oh-my-pi/pi-ai";
 import { AgentSession } from "../src/core/agent-session";
 import { AuthStorage } from "../src/core/auth-storage";
 import { ModelRegistry } from "../src/core/model-registry";

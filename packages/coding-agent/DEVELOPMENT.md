@@ -29,7 +29,7 @@ The coding-agent is structured into distinct layers:
 ┌─────────────────────────────────────────────────────────────┐
 │                   External Dependencies                     │
 │  @oh-my-pi/pi-agent (Agent, tools)                     │
-│  @oh-my-pi/pi-ai (models, providers)                   │
+│  @mariozechner/pi-ai (models, providers)                   │
 │  @oh-my-pi/pi-tui (TUI components)                     │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -65,7 +65,7 @@ src/
 │   ├── system-prompt.ts      # buildSystemPrompt(), loadProjectContextFiles()
 │   │
 │   ├── oauth/                # OAuth authentication (thin wrapper)
-│   │   └── index.ts          # Re-exports from @oh-my-pi/pi-ai with convenience wrappers
+│   │   └── index.ts          # Re-exports from @mariozechner/pi-ai with convenience wrappers
 │   │
 │   ├── hooks/                # Hook system for extending behavior
 │   │   ├── index.ts          # Hook exports

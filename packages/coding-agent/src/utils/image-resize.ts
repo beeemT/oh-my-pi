@@ -1,4 +1,4 @@
-import type { ImageContent } from "@oh-my-pi/pi-ai";
+import type { ImageContent } from "@mariozechner/pi-ai";
 import { getImageDimensionsWithImageMagick, resizeWithImageMagick } from "./image-magick.js";
 
 export interface ImageResizeOptions {
@@ -249,5 +249,7 @@ export function formatDimensionNote(result: ResizedImage): string | undefined {
 	}
 
 	const scale = result.originalWidth / result.width;
-	return `[Image: original ${result.originalWidth}x${result.originalHeight}, displayed at ${result.width}x${result.height}. Multiply coordinates by ${scale.toFixed(2)} to map to original image.]`;
+	return `[Image: original ${result.originalWidth}x${result.originalHeight}, displayed at ${result.width}x${
+		result.height
+	}. Multiply coordinates by ${scale.toFixed(2)} to map to original image.]`;
 }

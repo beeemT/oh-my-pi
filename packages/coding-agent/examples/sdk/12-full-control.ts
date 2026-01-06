@@ -8,7 +8,7 @@
  * paths relative to your cwd.
  */
 
-import { getModel } from "@oh-my-pi/pi-ai";
+import { getModel } from "@mariozechner/pi-ai";
 import {
 	AuthStorage,
 	type CustomTool,

@@ -242,7 +242,10 @@ function renderDiagnostics(
 				`[${item.severity}]`,
 			)}`;
 			if (item.message) {
-				output += `\n ${theme.fg("dim", detailPrefix)}${theme.fg("muted", truncate(item.message, TRUNCATE_LENGTHS.LINE, theme.format.ellipsis))}`;
+				output += `\n ${theme.fg("dim", detailPrefix)}${theme.fg(
+					"muted",
+					truncate(item.message, TRUNCATE_LENGTHS.LINE, theme.format.ellipsis),
+				)}`;
 			}
 		}
 		return new Text(output, 0, 0);
@@ -271,7 +274,10 @@ function renderDiagnostics(
 		output += `\n ${theme.fg("dim", branch)} ${theme.fg(severityColor, location)}${message}`;
 	}
 	if (remaining > 0) {
-		output += `\n ${theme.fg("dim", theme.tree.last)} ${theme.fg("muted", `${theme.format.ellipsis} ${remaining} more`)}`;
+		output += `\n ${theme.fg("dim", theme.tree.last)} ${theme.fg(
+			"muted",
+			`${theme.format.ellipsis} ${remaining} more`,
+		)}`;
 	}
 
 	return new Text(output, 0, 0);
@@ -436,10 +442,7 @@ function renderSymbols(symbolsMatch: RegExpMatchArray, lines: string[], expanded
 			const isLast = isLastSibling(i);
 			const branch = isLast ? theme.tree.last : theme.tree.branch;
 			const detailPrefix = isLast ? "   " : `${theme.tree.vertical}  `;
-			output += `\n${prefix}${theme.fg("dim", branch)} ${theme.fg("accent", sym.icon)} ${theme.fg(
-				"accent",
-				sym.name,
-			)}`;
+			output += `\n${prefix}${theme.fg("dim", branch)} ${theme.fg("accent", sym.icon)} ${theme.fg("accent", sym.name)}`;
 			output += `\n${prefix}${theme.fg("dim", detailPrefix)}${theme.fg("muted", `line ${sym.line}`)}`;
 		}
 		return new Text(output, 0, 0);
@@ -454,13 +457,16 @@ function renderSymbols(symbolsMatch: RegExpMatchArray, lines: string[], expanded
 		const sym = topLevel[i];
 		const isLast = i === topLevel.length - 1 && topLevelCount <= 3;
 		const branch = isLast ? theme.tree.last : theme.tree.branch;
-		output += `\n ${theme.fg("dim", branch)} ${theme.fg("accent", sym.icon)} ${theme.fg(
-			"accent",
-			sym.name,
-		)} ${theme.fg("muted", `line ${sym.line}`)}`;
+		output += `\n ${theme.fg("dim", branch)} ${theme.fg("accent", sym.icon)} ${theme.fg("accent", sym.name)} ${theme.fg(
+			"muted",
+			`line ${sym.line}`,
+		)}`;
 	}
 	if (topLevelCount > 3) {
-		output += `\n ${theme.fg("dim", theme.tree.last)} ${theme.fg("muted", `${theme.format.ellipsis} ${topLevelCount - 3} more`)}`;
+		output += `\n ${theme.fg("dim", theme.tree.last)} ${theme.fg(
+			"muted",
+			`${theme.format.ellipsis} ${topLevelCount - 3} more`,
+		)}`;
 	}
 
 	return new Text(output, 0, 0);
@@ -496,17 +502,26 @@ function renderGeneric(text: string, lines: string[], expanded: boolean, theme: 
 
 	const firstLine = lines[0] || "No output";
 	const expandHint = formatExpandHint(false, lines.length > 1, theme);
-	let output = `${icon} ${theme.fg("dim", truncate(firstLine, TRUNCATE_LENGTHS.TITLE, theme.format.ellipsis))}${expandHint}`;
+	let output = `${icon} ${theme.fg(
+		"dim",
+		truncate(firstLine, TRUNCATE_LENGTHS.TITLE, theme.format.ellipsis),
+	)}${expandHint}`;
 
 	if (lines.length > 1) {
 		const previewLines = lines.slice(1, 4);
 		for (let i = 0; i < previewLines.length; i++) {
 			const isLast = i === previewLines.length - 1 && lines.length <= 4;
 			const branch = isLast ? theme.tree.last : theme.tree.branch;
-			output += `\n ${theme.fg("dim", branch)} ${theme.fg("dim", truncate(previewLines[i].trim(), TRUNCATE_LENGTHS.CONTENT, theme.format.ellipsis))}`;
+			output += `\n ${theme.fg("dim", branch)} ${theme.fg(
+				"dim",
+				truncate(previewLines[i].trim(), TRUNCATE_LENGTHS.CONTENT, theme.format.ellipsis),
+			)}`;
 		}
 		if (lines.length > 4) {
-			output += `\n ${theme.fg("dim", theme.tree.last)} ${theme.fg("muted", formatMoreItems(lines.length - 4, "line", theme))}`;
+			output += `\n ${theme.fg("dim", theme.tree.last)} ${theme.fg(
+				"muted",
+				formatMoreItems(lines.length - 4, "line", theme),
+			)}`;
 		}
 	}
 

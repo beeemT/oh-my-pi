@@ -72,7 +72,9 @@ export const reportFindingTool: AgentTool<typeof ReportFindingParams, ReportFind
 			content: [
 				{
 					type: "text",
-					text: `Finding recorded: ${PRIORITY_LABELS[priority]} ${title}\nLocation: ${location}\nConfidence: ${(confidence * 100).toFixed(0)}%`,
+					text: `Finding recorded: ${PRIORITY_LABELS[priority]} ${title}\nLocation: ${location}\nConfidence: ${(
+						confidence * 100
+					).toFixed(0)}%`,
 				},
 			],
 			details: { title, body, priority, confidence, file_path, line_start, line_end },
@@ -84,7 +86,10 @@ export const reportFindingTool: AgentTool<typeof ReportFindingParams, ReportFind
 		const color = args.priority === 0 ? "error" : args.priority === 1 ? "warning" : "muted";
 		const titleText = String(args.title).replace(/^\[P\d\]\s*/, "");
 		return new Text(
-			`${theme.fg("toolTitle", theme.bold("report_finding "))}${theme.fg(color, `[${priority}]`)} ${theme.fg("dim", titleText)}`,
+			`${theme.fg("toolTitle", theme.bold("report_finding "))}${theme.fg(color, `[${priority}]`)} ${theme.fg(
+				"dim",
+				titleText,
+			)}`,
 			0,
 			0,
 		);
@@ -99,7 +104,9 @@ export const reportFindingTool: AgentTool<typeof ReportFindingParams, ReportFind
 
 		const priority = PRIORITY_LABELS[details.priority] ?? "P?";
 		const color = details.priority === 0 ? "error" : details.priority === 1 ? "warning" : "muted";
-		const location = `${details.file_path}:${details.line_start}${details.line_end !== details.line_start ? `-${details.line_end}` : ""}`;
+		const location = `${details.file_path}:${details.line_start}${
+			details.line_end !== details.line_start ? `-${details.line_end}` : ""
+		}`;
 
 		return new Text(
 			`${theme.fg("success", theme.status.success)} ${theme.fg(color, `[${priority}]`)} ${theme.fg("dim", location)}`,
@@ -141,7 +148,11 @@ export const submitReviewTool: AgentTool<typeof SubmitReviewParams, SubmitReview
 		const { overall_correctness, explanation, confidence } = params;
 
 		let summary = `## Review Summary\n\n`;
-		summary += `**Verdict:** ${overall_correctness === "correct" ? `${theme.status.success} Patch is correct` : `${theme.status.error} Patch is incorrect`}\n`;
+		summary += `**Verdict:** ${
+			overall_correctness === "correct"
+				? `${theme.status.success} Patch is correct`
+				: `${theme.status.error} Patch is incorrect`
+		}\n`;
 		summary += `**Confidence:** ${(confidence * 100).toFixed(0)}%\n\n`;
 		summary += explanation;
 
@@ -155,7 +166,10 @@ export const submitReviewTool: AgentTool<typeof SubmitReviewParams, SubmitReview
 		const verdict = args.overall_correctness === "correct" ? "correct" : "incorrect";
 		const color = args.overall_correctness === "correct" ? "success" : "error";
 		return new Text(
-			`${theme.fg("toolTitle", theme.bold("submit_review "))}${theme.fg(color, verdict)} ${theme.fg("dim", `(${((args.confidence as number) * 100).toFixed(0)}%)`)}`,
+			`${theme.fg("toolTitle", theme.bold("submit_review "))}${theme.fg(color, verdict)} ${theme.fg(
+				"dim",
+				`(${((args.confidence as number) * 100).toFixed(0)}%)`,
+			)}`,
 			0,
 			0,
 		);
@@ -174,7 +188,10 @@ export const submitReviewTool: AgentTool<typeof SubmitReviewParams, SubmitReview
 
 		container.addChild(
 			new Text(
-				`${theme.fg(verdictColor, verdictIcon)} Patch is ${theme.fg(verdictColor, details.overall_correctness)} ${theme.fg("dim", `(${(details.confidence * 100).toFixed(0)}% confidence)`)}`,
+				`${theme.fg(verdictColor, verdictIcon)} Patch is ${theme.fg(
+					verdictColor,
+					details.overall_correctness,
+				)} ${theme.fg("dim", `(${(details.confidence * 100).toFixed(0)}% confidence)`)}`,
 				0,
 				0,
 			),
@@ -264,7 +281,9 @@ subprocessToolRegistry.register<SubmitReviewDetails>("submit_review", {
 		const verdictColor = data.overall_correctness === "correct" ? "success" : "error";
 		const verdictIcon = data.overall_correctness === "correct" ? theme.status.success : theme.status.error;
 		return new Text(
-			`${theme.fg(verdictColor, verdictIcon)} Review: ${theme.fg(verdictColor, data.overall_correctness)} (${(data.confidence * 100).toFixed(0)}%)`,
+			`${theme.fg(verdictColor, verdictIcon)} Review: ${theme.fg(verdictColor, data.overall_correctness)} (${(
+				data.confidence * 100
+			).toFixed(0)}%)`,
 			0,
 			0,
 		);

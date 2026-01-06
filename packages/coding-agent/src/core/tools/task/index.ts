@@ -13,8 +13,8 @@
  *   - Session artifacts for debugging
  */
 
+import type { Usage } from "@mariozechner/pi-ai";
 import type { AgentTool } from "@oh-my-pi/pi-agent-core";
-import type { Usage } from "@oh-my-pi/pi-ai";
 import type { Theme } from "../../../modes/interactive/theme/theme";
 import { formatDuration } from "../render-utils";
 import { cleanupTempDir, createTempArtifactsDir, getArtifactsDir } from "./artifacts";
@@ -516,14 +516,18 @@ export async function createTaskTool(
 
 				const skippedNote =
 					skippedSelfRecursion > 0
-						? ` (${skippedSelfRecursion} ${blockedAgent} task${skippedSelfRecursion > 1 ? "s" : ""} skipped - self-recursion blocked)`
+						? ` (${skippedSelfRecursion} ${blockedAgent} task${
+								skippedSelfRecursion > 1 ? "s" : ""
+							} skipped - self-recursion blocked)`
 						: "";
 				const outputIds = resultsWithUsage.map((r) => `${r.agent}_${r.index}`);
 				const outputHint =
 					hasOutputTool && outputIds.length > 0
 						? `\n\nUse output tool for full logs: output ids ${outputIds.join(", ")}`
 						: "";
-				const summary = `${successCount}/${resultsWithUsage.length} succeeded${skippedNote} [${formatDuration(totalDuration)}]\n\n${summaries.join("\n\n---\n\n")}${outputHint}`;
+				const summary = `${successCount}/${resultsWithUsage.length} succeeded${skippedNote} [${formatDuration(
+					totalDuration,
+				)}]\n\n${summaries.join("\n\n---\n\n")}${outputHint}`;
 
 				// Cleanup temp directory if used
 				if (tempArtifactsDir) {

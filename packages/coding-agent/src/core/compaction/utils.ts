@@ -2,8 +2,8 @@
  * Shared utilities for compaction and branch summarization.
  */
 
+import type { Message } from "@mariozechner/pi-ai";
 import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
-import type { Message } from "@oh-my-pi/pi-ai";
 import summarizationSystemPrompt from "../../prompts/summarization-system.md" with { type: "text" };
 
 // ============================================================================

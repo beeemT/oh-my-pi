@@ -4,9 +4,6 @@
 		"noEmit": true,
 		"paths": {
 			"*": ["./*"],
-			"@oh-my-pi/pi-ai": ["./packages/ai/src/index.ts"],
-			"@oh-my-pi/pi-ai/*": ["./packages/ai/src/*"],
-			"@oh-my-pi/pi-ai/dist/*": ["./packages/ai/src/*"],
 			"@oh-my-pi/pi-agent-core": ["./packages/agent/src/index.ts"],
 			"@oh-my-pi/pi-agent-core/*": ["./packages/agent/src/*"],
 			"@oh-my-pi/pi-coding-agent": ["./packages/coding-agent/src/index.ts"],

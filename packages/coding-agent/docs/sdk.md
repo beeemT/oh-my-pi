@@ -248,7 +248,7 @@ const { session } = await createAgentSession({
 ### Model
 
 ```typescript
-import { getModel } from "@oh-my-pi/pi-ai";
+import { getModel } from "@mariozechner/pi-ai";
 import { discoverAuthStorage, discoverModels } from "@oh-my-pi/pi-coding-agent";
 
 const authStorage = discoverAuthStorage();
@@ -733,7 +733,7 @@ Project overrides global. Nested objects merge keys. Setters only modify global 
 All discovery functions accept optional `cwd` and `agentDir` parameters.
 
 ```typescript
-import { getModel } from "@oh-my-pi/pi-ai";
+import { getModel } from "@mariozechner/pi-ai";
 import {
 	AuthStorage,
 	ModelRegistry,
@@ -806,7 +806,7 @@ interface CreateAgentSessionResult {
 ## Complete Example
 
 ```typescript
-import { getModel } from "@oh-my-pi/pi-ai";
+import { getModel } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import {
 	AuthStorage,

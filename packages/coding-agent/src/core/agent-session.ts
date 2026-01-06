@@ -13,9 +13,9 @@
  * Modes use this class and add their own I/O layer on top.
  */
 
+import type { AssistantMessage, ImageContent, Message, Model, TextContent, Usage } from "@mariozechner/pi-ai";
+import { isContextOverflow, modelsAreEqual, supportsXhigh } from "@mariozechner/pi-ai";
 import type { Agent, AgentEvent, AgentMessage, AgentState, AgentTool, ThinkingLevel } from "@oh-my-pi/pi-agent-core";
-import type { AssistantMessage, ImageContent, Message, Model, TextContent, Usage } from "@oh-my-pi/pi-ai";
-import { isContextOverflow, modelsAreEqual, supportsXhigh } from "@oh-my-pi/pi-ai";
 import type { Rule } from "../capability/rule";
 import { getAuthPath } from "../config";
 import { theme } from "../modes/interactive/theme/theme";

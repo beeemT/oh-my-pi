@@ -2,9 +2,19 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Switched from local `@oh-my-pi/pi-ai` to upstream `@mariozechner/pi-ai` package
+
+### Added
+
+- Added `sessionId` option for provider caching (e.g., OpenAI Codex session-based prompt caching)
+- Added `sessionId` getter/setter on Agent class for runtime session switching
+
 ## [3.20.1] - 2026-01-06
 
 ## [3.20.0] - 2026-01-06
+
 ### Breaking Changes
 
 - Replaced `queueMessage`/`queueMode` with steering + follow-up queues: use `steer`, `setSteeringMode`, and `getSteeringMode` for mid-run interruptions, and `followUp`, `setFollowUpMode`, and `getFollowUpMode` for post-turn messages
@@ -38,6 +48,7 @@
 ## [3.5.1337] - 2026-01-03
 
 ## [3.4.1337] - 2026-01-03
+
 ### Added
 
 - Added `popMessage()` method to Agent class for removing and retrieving the last message
@@ -64,6 +75,7 @@
 ## [1.500.0] - 2026-01-03
 
 ## [1.341.0] - 2026-01-03
+
 ### Added
 
 - Added `interruptMode` option to control when queued messages interrupt tool execution.
@@ -103,7 +115,7 @@ Initial release under @oh-my-pi scope. See previous releases at [badlogic/pi-mon
 
 - **`UserMessageWithAttachments` and `Attachment` types removed**: Attachment handling is now the responsibility of the `convertToLlm` function.
 
-- **Agent loop moved from `@oh-my-pi/pi-ai`**: The `agentLoop`, `agentLoopContinue`, and related types have moved to this package. Import from `@oh-my-pi/pi-agent` instead.
+- **Agent loop moved from `@mariozechner/pi-ai`**: The `agentLoop`, `agentLoopContinue`, and related types have moved to this package. Import from `@oh-my-pi/pi-agent` instead.
 
 ### Added
 

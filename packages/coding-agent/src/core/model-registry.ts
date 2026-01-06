@@ -11,7 +11,7 @@ import {
 	type KnownProvider,
 	type Model,
 	normalizeDomain,
-} from "@oh-my-pi/pi-ai";
+} from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import AjvModule from "ajv";
 import type { AuthStorage } from "./auth-storage";

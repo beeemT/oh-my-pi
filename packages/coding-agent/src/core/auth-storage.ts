@@ -15,7 +15,7 @@ import {
 	loginOpenAICodex,
 	type OAuthCredentials,
 	type OAuthProvider,
-} from "@oh-my-pi/pi-ai";
+} from "@mariozechner/pi-ai";
 import { logger } from "./logger";
 
 export type ApiKeyCredential = {

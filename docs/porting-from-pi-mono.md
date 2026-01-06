@@ -31,14 +31,17 @@ Upstream uses different package scopes. Replace them consistently.
 - Replace old scopes with the local scope used here.
 - Examples (adjust to match the actual packages you are porting):
   - `@mariozechner/pi-coding-agent` -> `@oh-my-pi/pi-coding-agent`
-  - `@mariozechner/pi-ai` -> `@oh-my-pi/pi-ai`
-  - `@badlogic/pi-tui` -> `@oh-my-pi/pi-tui`
+  - `@mariozechner/pi-agent-core` -> `@oh-my-pi/pi-agent-core`
+  - `@mariozechner/tui` -> `@oh-my-pi/pi-tui`
+- But! Do not switch the ones we use from upstream:
+  - `@mariozechner/pi-ai` should stay as `@mariozechner/pi-ai`
 
 ## 4) Use Bun APIs where they improve on Node
 
 We run on Bun. Replace Node APIs only when Bun provides a better alternative.
 
 **DO replace:**
+
 - Process spawning: `child_process.spawn` → `Bun.spawn` / `Bun.spawnSync`
 - File I/O: `fs.readFileSync` → `Bun.file().text()` / `Bun.write()`
 - HTTP clients: `node-fetch`, `axios` → native `fetch`
@@ -47,6 +50,7 @@ We run on Bun. Replace Node APIs only when Bun provides a better alternative.
 - Env loading: `dotenv` → Bun loads `.env` automatically
 
 **DO NOT replace (these work fine in Bun):**
+
 - `os.homedir()` — do NOT replace with `process.env.HOME`, `Bun.env.HOME`, or literal `"~"`
 - `os.tmpdir()` — do NOT replace with `Bun.env.TMPDIR || "/tmp"` or hardcoded paths
 - `fs.mkdtempSync()` — do NOT replace with manual path construction
@@ -55,6 +59,7 @@ We run on Bun. Replace Node APIs only when Bun provides a better alternative.
 **Import style:** Use `node:` prefix for Node builtins (`import { homedir } from "node:os"`).
 
 **Wrong:**
+
 ```typescript
 // BROKEN: env vars may be undefined, "~" is not expanded
 const home = process.env.HOME || Bun.env.HOME || "~";
@@ -62,6 +67,7 @@ const tmp = Bun.env.TMPDIR || "/tmp";
 ```
 
 **Correct:**
+
 ```typescript
 import { homedir, tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
@@ -163,6 +169,7 @@ git diff HEAD upstream/main -- path/to/file.ts
 ```
 
 If the diff shows the file was **reworked** (not just patched):
+
 - New abstractions, renamed concepts, merged modules, changed data flow
 
 Then you must **read the new implementation thoroughly** before porting. Blind merging of reworked code loses functionality because:

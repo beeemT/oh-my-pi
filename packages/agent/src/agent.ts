@@ -8,10 +8,9 @@ import {
 	type ImageContent,
 	type Message,
 	type Model,
-	type ReasoningEffort,
 	streamSimple,
 	type TextContent,
-} from "@oh-my-pi/pi-ai";
+} from "@mariozechner/pi-ai";
 import { agentLoop, agentLoopContinue } from "./agent-loop";
 import type {
 	AgentContext,
@@ -70,6 +69,12 @@ export interface AgentOptions {
 	streamFn?: StreamFn;
 
 	/**
+	 * Optional session identifier forwarded to LLM providers.
+	 * Used by providers that support session-based caching (e.g., OpenAI Codex).
+	 */
+	sessionId?: string;
+
+	/**
 	 * Resolves an API key dynamically for each LLM call.
 	 * Useful for expiring tokens (e.g., GitHub Copilot OAuth).
 	 */
@@ -105,6 +110,7 @@ export class Agent {
 	private followUpMode: "all" | "one-at-a-time";
 	private interruptMode: "immediate" | "wait";
 	public streamFn: StreamFn;
+	private _sessionId?: string;
 	public getApiKey?: (provider: string) => Promise<string | undefined> | string | undefined;
 	private getToolContext?: () => AgentToolContext | undefined;
 	private runningPrompt?: Promise<void>;
@@ -118,8 +124,24 @@ export class Agent {
 		this.followUpMode = opts.followUpMode || "one-at-a-time";
 		this.interruptMode = opts.interruptMode || "immediate";
 		this.streamFn = opts.streamFn || streamSimple;
+		this._sessionId = opts.sessionId;
 		this.getApiKey = opts.getApiKey;
 		this.getToolContext = opts.getToolContext;
+	}
+
+	/**
+	 * Get the current session ID used for provider caching.
+	 */
+	get sessionId(): string | undefined {
+		return this._sessionId;
+	}
+
+	/**
+	 * Set the session ID for provider caching.
+	 * Call this when switching sessions (new session, branch, resume).
+	 */
+	set sessionId(value: string | undefined) {
+		this._sessionId = value;
 	}
 
 	get state(): AgentState {
@@ -314,12 +336,7 @@ export class Agent {
 		this._state.streamMessage = null;
 		this._state.error = undefined;
 
-		const reasoning: ReasoningEffort | undefined =
-			this._state.thinkingLevel === "off"
-				? undefined
-				: this._state.thinkingLevel === "minimal"
-					? "low"
-					: (this._state.thinkingLevel as ReasoningEffort);
+		const reasoning = this._state.thinkingLevel === "off" ? undefined : this._state.thinkingLevel;
 
 		const context: AgentContext = {
 			systemPrompt: this._state.systemPrompt,
@@ -331,6 +348,7 @@ export class Agent {
 			model,
 			reasoning,
 			interruptMode: this.interruptMode,
+			sessionId: this._sessionId,
 			convertToLlm: this.convertToLlm,
 			transformContext: this.transformContext,
 			getApiKey: this.getApiKey,

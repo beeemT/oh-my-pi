@@ -8,8 +8,8 @@
  * - Interact with the user via UI primitives
  */
 
+import type { ImageContent, Model, TextContent, ToolResultMessage } from "@mariozechner/pi-ai";
 import type { AgentMessage, AgentToolResult, AgentToolUpdateCallback } from "@oh-my-pi/pi-agent-core";
-import type { ImageContent, Model, TextContent, ToolResultMessage } from "@oh-my-pi/pi-ai";
 import type { Component, KeyId, TUI } from "@oh-my-pi/pi-tui";
 import type { Static, TSchema } from "@sinclair/typebox";
 import type { Theme } from "../../modes/interactive/theme/theme";

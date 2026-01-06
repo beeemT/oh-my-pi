@@ -1,4 +1,4 @@
-import type { Usage } from "@oh-my-pi/pi-ai";
+import type { Usage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 
 /** Source of an agent definition */
