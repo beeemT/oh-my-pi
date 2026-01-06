@@ -111,8 +111,8 @@ export function renderCall(args: TaskParams, theme: Theme): Component {
 		return new Text(`${label} ${theme.fg("accent", task.agent)}: ${theme.fg("muted", taskPreview)}`, 0, 0);
 	}
 
-	// Multiple tasks - show count and agent names
-	const agents = args.tasks.map((t) => t.agent).join(", ");
+	// Multiple tasks - show count and descriptions (or agent names as fallback)
+	const agents = args.tasks.map((t) => t.description?.trim() || t.agent).join(", ");
 	return new Text(
 		`${label} ${theme.fg("muted", `${args.tasks.length} agents: ${truncate(agents, 50, theme.format.ellipsis)}`)}`,
 		0,

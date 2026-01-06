@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+
+- Changed multi-task display to show task descriptions instead of agent names when available
 
 ## [3.20.0] - 2026-01-06
 ### Added
