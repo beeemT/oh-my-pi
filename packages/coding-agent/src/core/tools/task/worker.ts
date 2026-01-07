@@ -123,6 +123,9 @@ async function runTask(payload: SubagentWorkerStartPayload): Promise<void> {
 
 		// Create agent session (equivalent to CLI's createAgentSession)
 		// Note: hasUI: false disables interactive features
+		const completionInstruction =
+			"When finished, call the complete tool exactly once. Do not end with a plain-text final answer.";
+
 		const { session } = await createAgentSession({
 			cwd: payload.cwd,
 			authStorage,
@@ -130,8 +133,10 @@ async function runTask(payload: SubagentWorkerStartPayload): Promise<void> {
 			model,
 			thinkingLevel,
 			toolNames: payload.toolNames,
+			outputSchema: payload.outputSchema,
+			requireCompleteTool: true,
 			// Append system prompt (equivalent to CLI's --append-system-prompt)
-			systemPrompt: (defaultPrompt) => `${defaultPrompt}\n\n${payload.systemPrompt}`,
+			systemPrompt: (defaultPrompt) => `${defaultPrompt}\n\n${payload.systemPrompt}\n\n${completionInstruction}`,
 			sessionManager,
 			hasUI: false,
 			// Pass spawn restrictions to nested tasks
@@ -164,15 +169,42 @@ async function runTask(payload: SubagentWorkerStartPayload): Promise<void> {
 			await extensionRunner.emit({ type: "session_start" });
 		}
 
+		// Track complete tool calls
+		const MAX_COMPLETE_RETRIES = 3;
+		let completeCalled = false;
+
 		// Subscribe to events and forward to parent (equivalent to --mode json output)
 		session.subscribe((event: AgentSessionEvent) => {
 			if (isAgentEvent(event)) {
 				postMessageSafe({ type: "event", event });
+				// Track when complete tool is called
+				if (event.type === "tool_execution_end" && event.toolName === "complete") {
+					completeCalled = true;
+				}
 			}
 		});
 
 		// Run the prompt (equivalent to --prompt flag)
 		await session.prompt(payload.task);
+
+		// Retry loop if complete was not called
+		let retryCount = 0;
+		while (!completeCalled && retryCount < MAX_COMPLETE_RETRIES && !abortRequested) {
+			retryCount++;
+			const reminder = `<system-reminder>
+CRITICAL: You stopped without calling the complete tool. This is reminder ${retryCount} of ${MAX_COMPLETE_RETRIES}.
+
+You MUST call the complete tool to finish your task. Options:
+1. Call complete with your result data if you have completed the task
+2. Call complete with status="aborted" and an error message if you cannot complete the task
+
+Failure to call complete after ${MAX_COMPLETE_RETRIES} reminders will result in task failure.
+</system-reminder>
+
+Call complete now.`;
+
+			await session.prompt(reminder);
+		}
 
 		// Check if aborted during execution
 		const lastMessage = session.state.messages[session.state.messages.length - 1];

@@ -149,6 +149,11 @@ export interface CreateAgentSessionOptions {
 	/** Tool names explicitly requested (enables disabled-by-default tools) */
 	toolNames?: string[];
 
+	/** Output schema for structured completion (subagents) */
+	outputSchema?: unknown;
+	/** Whether to include the complete tool by default */
+	requireCompleteTool?: boolean;
+
 	/** Session manager. Default: SessionManager.create(cwd) */
 	sessionManager?: SessionManager;
 
@@ -608,6 +613,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		hasUI: options.hasUI ?? false,
 		rulebookRules,
 		eventBus,
+		outputSchema: options.outputSchema,
+		requireCompleteTool: options.requireCompleteTool,
 		getSessionFile: () => sessionManager.getSessionFile() ?? null,
 		getSessionSpawns: () => options.spawns ?? "*",
 		settings: settingsManager,

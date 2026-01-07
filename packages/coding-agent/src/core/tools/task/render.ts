@@ -69,6 +69,118 @@ function formatFindingSummary(findings: ReportFindingDetails[], theme: Theme): s
 	return `${theme.fg("dim", "Findings:")} ${parts.join(theme.sep.dot)}`;
 }
 
+function formatJsonScalar(value: unknown): string {
+	if (value === null) return "null";
+	if (typeof value === "string") return `"${value}"`;
+	if (typeof value === "number" || typeof value === "boolean") return String(value);
+	return "";
+}
+
+function buildTreePrefix(ancestors: boolean[], theme: Theme): string {
+	return ancestors.map((hasNext) => (hasNext ? `${theme.tree.vertical}  ` : "   ")).join("");
+}
+
+function renderJsonTreeLines(
+	value: unknown,
+	theme: Theme,
+	maxDepth: number,
+	maxLines: number,
+): { lines: string[]; truncated: boolean } {
+	const lines: string[] = [];
+	let truncated = false;
+
+	const iconObject = theme.styledSymbol("icon.folder", "muted");
+	const iconArray = theme.styledSymbol("icon.package", "muted");
+	const iconScalar = theme.styledSymbol("icon.file", "muted");
+
+	const pushLine = (line: string) => {
+		if (lines.length >= maxLines) {
+			truncated = true;
+			return false;
+		}
+		lines.push(line);
+		return true;
+	};
+
+	const renderNode = (val: unknown, key: string | undefined, ancestors: boolean[], isLast: boolean, depth: number) => {
+		if (lines.length >= maxLines) {
+			truncated = true;
+			return;
+		}
+
+		const connector = isLast ? theme.tree.last : theme.tree.branch;
+		const prefix = `${buildTreePrefix(ancestors, theme)}${theme.fg("dim", connector)} `;
+		const scalar = formatJsonScalar(val);
+
+		if (scalar) {
+			const label = key ? theme.fg("muted", key) : theme.fg("muted", "value");
+			pushLine(`${prefix}${iconScalar} ${label}: ${theme.fg("dim", scalar)}`);
+			return;
+		}
+
+		if (Array.isArray(val)) {
+			const header = key ? theme.fg("muted", key) : theme.fg("muted", "array");
+			pushLine(`${prefix}${iconArray} ${header}`);
+			if (val.length === 0) {
+				pushLine(
+					`${buildTreePrefix([...ancestors, !isLast], theme)}${theme.fg("dim", theme.tree.hook)} ${theme.fg("dim", "[]")}`,
+				);
+				return;
+			}
+			if (depth >= maxDepth) {
+				pushLine(
+					`${buildTreePrefix([...ancestors, !isLast], theme)}${theme.fg("dim", theme.tree.hook)} ${theme.fg("dim", theme.format.ellipsis)}`,
+				);
+				return;
+			}
+			const nextAncestors = [...ancestors, !isLast];
+			for (let i = 0; i < val.length; i++) {
+				renderNode(val[i], `[${i}]`, nextAncestors, i === val.length - 1, depth + 1);
+				if (lines.length >= maxLines) {
+					truncated = true;
+					return;
+				}
+			}
+			return;
+		}
+
+		if (val && typeof val === "object") {
+			const header = key ? theme.fg("muted", key) : theme.fg("muted", "object");
+			pushLine(`${prefix}${iconObject} ${header}`);
+			const entries = Object.entries(val as Record<string, unknown>);
+			if (entries.length === 0) {
+				pushLine(
+					`${buildTreePrefix([...ancestors, !isLast], theme)}${theme.fg("dim", theme.tree.hook)} ${theme.fg("dim", "{}")}`,
+				);
+				return;
+			}
+			if (depth >= maxDepth) {
+				pushLine(
+					`${buildTreePrefix([...ancestors, !isLast], theme)}${theme.fg("dim", theme.tree.hook)} ${theme.fg("dim", theme.format.ellipsis)}`,
+				);
+				return;
+			}
+			const nextAncestors = [...ancestors, !isLast];
+			for (let i = 0; i < entries.length; i++) {
+				const [childKey, child] = entries[i];
+				renderNode(child, childKey, nextAncestors, i === entries.length - 1, depth + 1);
+				if (lines.length >= maxLines) {
+					truncated = true;
+					return;
+				}
+			}
+			return;
+		}
+
+		const label = key ? theme.fg("muted", key) : theme.fg("muted", "value");
+		pushLine(`${prefix}${iconScalar} ${label}: ${theme.fg("dim", String(val))}`);
+	};
+
+	renderNode(value, undefined, [], true, 0);
+
+	return { lines, truncated };
+}
+
 function renderOutputSection(
 	output: string,
 	continuePrefix: string,
@@ -78,11 +190,30 @@ function renderOutputSection(
 	maxExpanded = 10,
 ): string[] {
 	const lines: string[] = [];
-	const outputLines = output.split("\n").filter((line) => line.trim());
-	if (outputLines.length === 0) return lines;
+	const trimmedOutput = output.trim();
+	if (!trimmedOutput) return lines;
 
 	lines.push(`${continuePrefix}${theme.fg("dim", "Output")}`);
 
+	if (trimmedOutput.startsWith("{") || trimmedOutput.startsWith("[")) {
+		try {
+			const parsed = JSON.parse(trimmedOutput);
+			const tree = renderJsonTreeLines(parsed, theme, expanded ? 6 : 2, expanded ? 24 : 6);
+			if (tree.lines.length > 0) {
+				for (const line of tree.lines) {
+					lines.push(`${continuePrefix}  ${line}`);
+				}
+				if (tree.truncated) {
+					lines.push(`${continuePrefix}  ${theme.fg("dim", theme.format.ellipsis)}`);
+				}
+				return lines;
+			}
+		} catch {
+			// Fall back to raw output
+		}
+	}
+
+	const outputLines = output.split("\n").filter((line) => line.trim());
 	const previewCount = expanded ? maxExpanded : maxCollapsed;
 	for (const line of outputLines.slice(0, previewCount)) {
 		lines.push(`${continuePrefix}  ${theme.fg("dim", truncate(line, 70, theme.format.ellipsis))}`);
@@ -144,9 +275,8 @@ function renderAgentProgress(
 				? "error"
 				: "accent";
 
-	// Main status line - include index for Output tool ID derivation
-	const agentId = `${progress.agent}(${progress.index})`;
-	let statusLine = `${prefix} ${theme.fg(iconColor, icon)} ${theme.fg("accent", agentId)}`;
+	// Main status line - use taskId for Output tool
+	let statusLine = `${prefix} ${theme.fg(iconColor, icon)} ${theme.fg("accent", progress.taskId)}`;
 	const description = progress.description?.trim();
 	if (description) {
 		statusLine += ` ${theme.fg("muted", truncate(description, 40, theme.format.ellipsis))}`;
@@ -342,9 +472,8 @@ function renderAgentResult(result: SingleResult, isLast: boolean, expanded: bool
 	const iconColor = success ? "success" : "error";
 	const statusText = aborted ? "aborted" : success ? "done" : "failed";
 
-	// Main status line - include index for Output tool ID derivation
-	const agentId = `${result.agent}(${result.index})`;
-	let statusLine = `${prefix} ${theme.fg(iconColor, icon)} ${theme.fg("accent", agentId)} ${formatBadge(statusText, iconColor, theme)}`;
+	// Main status line - use taskId for Output tool
+	let statusLine = `${prefix} ${theme.fg(iconColor, icon)} ${theme.fg("accent", result.taskId)} ${formatBadge(statusText, iconColor, theme)}`;
 	const description = result.description?.trim();
 	if (description) {
 		statusLine += ` ${theme.fg("muted", truncate(description, 40, theme.format.ellipsis))}`;

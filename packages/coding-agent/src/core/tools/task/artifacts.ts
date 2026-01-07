@@ -38,14 +38,12 @@ export function ensureArtifactsDir(dir: string): void {
  */
 export function getArtifactPaths(
 	dir: string,
-	agentName: string,
-	index: number,
+	taskId: string,
 ): { inputPath: string; outputPath: string; jsonlPath: string } {
-	const base = `${agentName}_${index}`;
 	return {
-		inputPath: path.join(dir, `${base}.in.md`),
-		outputPath: path.join(dir, `${base}.out.md`),
-		jsonlPath: path.join(dir, `${base}.jsonl`),
+		inputPath: path.join(dir, `${taskId}.in.md`),
+		outputPath: path.join(dir, `${taskId}.out.md`),
+		jsonlPath: path.join(dir, `${taskId}.jsonl`),
 	};
 }
 
@@ -54,15 +52,14 @@ export function getArtifactPaths(
  */
 export async function writeArtifacts(
 	dir: string,
-	agentName: string,
-	index: number,
+	taskId: string,
 	input: string,
 	output: string,
 	jsonlEvents?: string[],
 ): Promise<{ inputPath: string; outputPath: string; jsonlPath?: string }> {
 	ensureArtifactsDir(dir);
 
-	const paths = getArtifactPaths(dir, agentName, index);
+	const paths = getArtifactPaths(dir, taskId);
 
 	// Write input
 	await fs.promises.writeFile(paths.inputPath, input, "utf-8");

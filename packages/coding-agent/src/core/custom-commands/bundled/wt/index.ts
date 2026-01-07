@@ -9,6 +9,7 @@ import { formatStats, getStats } from "../../../../lib/worktree/stats";
 import type { HookCommandContext } from "../../../hooks/types";
 import { discoverAgents, getAgent } from "../../../tools/task/discovery";
 import { runSubprocess } from "../../../tools/task/executor";
+import { generateTaskName } from "../../../tools/task/name-generator";
 import type { AgentDefinition } from "../../../tools/task/types";
 import type { CustomCommand, CustomCommandAPI } from "../../types";
 
@@ -265,6 +266,7 @@ async function handleSpawn(args: SpawnArgs, ctx: HookCommandContext): Promise<st
 		agent,
 		task: args.task,
 		index: 0,
+		taskId: generateTaskName(),
 		context,
 	});
 
@@ -322,6 +324,7 @@ async function handleParallel(args: ParallelTask[], ctx: HookCommandContext): Pr
 			agent,
 			task: task.task,
 			index,
+			taskId: generateTaskName(),
 			context: `Scope: ${task.scope}`,
 		});
 		await updateSession(session.id, {

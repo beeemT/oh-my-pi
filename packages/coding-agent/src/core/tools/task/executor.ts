@@ -28,8 +28,10 @@ export interface ExecutorOptions {
 	task: string;
 	description?: string;
 	index: number;
+	taskId: string;
 	context?: string;
 	modelOverride?: string;
+	outputSchema?: unknown;
 	signal?: AbortSignal;
 	onProgress?: (progress: AgentProgress) => void;
 	sessionFile?: string | null;
@@ -130,12 +132,13 @@ function getUsageTokens(usage: unknown): number {
  * Run a single agent in a worker.
  */
 export async function runSubprocess(options: ExecutorOptions): Promise<SingleResult> {
-	const { cwd, agent, task, index, context, modelOverride, signal, onProgress } = options;
+	const { cwd, agent, task, index, taskId, context, modelOverride, outputSchema, signal, onProgress } = options;
 	const startTime = Date.now();
 
 	// Initialize progress
 	const progress: AgentProgress = {
 		index,
+		taskId,
 		agent: agent.name,
 		agentSource: agent.source,
 		status: "running",
@@ -153,6 +156,7 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 	if (signal?.aborted) {
 		return {
 			index,
+			taskId,
 			agent: agent.name,
 			agentSource: agent.source,
 			task,
@@ -177,7 +181,7 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 
 	if (options.artifactsDir) {
 		ensureArtifactsDir(options.artifactsDir);
-		artifactPaths = getArtifactPaths(options.artifactsDir, agent.name, index);
+		artifactPaths = getArtifactPaths(options.artifactsDir, taskId);
 		subtaskSessionFile = artifactPaths.jsonlPath;
 
 		// Write input file immediately (real-time visibility)
@@ -451,6 +455,7 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 			systemPrompt: agent.systemPrompt,
 			model: resolvedModel,
 			toolNames,
+			outputSchema,
 			sessionFile,
 			spawnsEnv,
 		},
@@ -497,13 +502,46 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 	}
 	worker.terminate();
 
-	const exitCode = done.exitCode;
+	let exitCode = done.exitCode;
 	if (done.error) {
 		stderr = done.error;
 	}
 
 	// Use final output if available, otherwise accumulated output
-	const rawOutput = finalOutput || output;
+	let rawOutput = finalOutput || output;
+	let abortedViaComplete = false;
+	const completeItems = progress.extractedToolData?.complete as
+		| Array<{ data?: unknown; status?: "success" | "aborted"; error?: string }>
+		| undefined;
+	const hasComplete = Array.isArray(completeItems) && completeItems.length > 0;
+	if (hasComplete) {
+		const lastComplete = completeItems[completeItems.length - 1];
+		if (lastComplete?.status === "aborted") {
+			// Agent explicitly aborted via complete tool - clean exit with error info
+			abortedViaComplete = true;
+			exitCode = 0;
+			stderr = lastComplete.error || "Subagent aborted task";
+			try {
+				rawOutput = JSON.stringify({ aborted: true, error: lastComplete.error }, null, 2);
+			} catch {
+				rawOutput = `{"aborted":true,"error":"${lastComplete.error || "Unknown error"}"}`;
+			}
+		} else {
+			// Normal successful completion
+			const completeData = lastComplete?.data ?? null;
+			try {
+				rawOutput = JSON.stringify(completeData, null, 2) ?? "null";
+			} catch (err) {
+				const errorMessage = err instanceof Error ? err.message : String(err);
+				rawOutput = `{"error":"Failed to serialize complete data: ${errorMessage}"}`;
+			}
+			exitCode = 0;
+			stderr = "";
+		}
+	} else {
+		const warning = "SYSTEM WARNING: Subagent exited without calling complete tool after 3 reminders.";
+		rawOutput = rawOutput ? `${warning}\n\n${rawOutput}` : warning;
+	}
 	const { text: truncatedOutput, truncated } = truncateOutput(rawOutput);
 
 	// Write output artifact (input and jsonl already written in real-time)
@@ -522,12 +560,13 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 	}
 
 	// Update final progress
-	const wasAborted = done.aborted || signal?.aborted || false;
+	const wasAborted = abortedViaComplete || (!hasComplete && (done.aborted || signal?.aborted || false));
 	progress.status = wasAborted ? "aborted" : exitCode === 0 ? "completed" : "failed";
 	emitProgress();
 
 	return {
 		index,
+		taskId,
 		agent: agent.name,
 		agentSource: agent.source,
 		task,

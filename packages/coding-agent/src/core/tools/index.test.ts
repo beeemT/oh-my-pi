@@ -50,6 +50,14 @@ describe("createTools", () => {
 		expect(names).toEqual(["report_finding"]);
 	});
 
+	it("includes complete tool when required", async () => {
+		const session = createTestSession({ requireCompleteTool: true });
+		const tools = await createTools(session);
+		const names = tools.map((t) => t.name);
+
+		expect(names).toContain("complete");
+	});
+
 	it("excludes ask tool when hasUI is false", async () => {
 		const session = createTestSession({ hasUI: false });
 		const tools = await createTools(session);
@@ -175,6 +183,6 @@ describe("createTools", () => {
 	});
 
 	it("HIDDEN_TOOLS contains review tools", () => {
-		expect(Object.keys(HIDDEN_TOOLS).sort()).toEqual(["report_finding", "submit_review"]);
+		expect(Object.keys(HIDDEN_TOOLS).sort()).toEqual(["complete", "report_finding", "submit_review"]);
 	});
 });

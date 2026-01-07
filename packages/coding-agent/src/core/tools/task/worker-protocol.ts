@@ -6,6 +6,7 @@ export interface SubagentWorkerStartPayload {
 	systemPrompt: string;
 	model?: string;
 	toolNames?: string[];
+	outputSchema?: unknown;
 	sessionFile?: string | null;
 	spawnsEnv?: string;
 }

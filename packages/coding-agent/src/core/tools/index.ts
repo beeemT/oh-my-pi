@@ -1,5 +1,6 @@
 export { type AskToolDetails, askTool, createAskTool } from "./ask";
 export { type BashToolDetails, createBashTool } from "./bash";
+export { createCompleteTool } from "./complete";
 export { createEditTool } from "./edit";
 // Exa MCP tools (22 tools)
 export { exaTools } from "./exa/index";
@@ -54,6 +55,7 @@ import type { Rule } from "../../capability/rule";
 import type { EventBus } from "../event-bus";
 import { createAskTool } from "./ask";
 import { createBashTool } from "./bash";
+import { createCompleteTool } from "./complete";
 import { createEditTool } from "./edit";
 import { createFindTool } from "./find";
 import { createGitTool } from "./git";
@@ -83,6 +85,10 @@ export interface ToolSession {
 	rulebookRules: Rule[];
 	/** Event bus for tool/extension communication */
 	eventBus?: EventBus;
+	/** Output schema for structured completion (subagents) */
+	outputSchema?: unknown;
+	/** Whether to include the complete tool by default */
+	requireCompleteTool?: boolean;
 	/** Get session file */
 	getSessionFile: () => string | null;
 	/** Get session spawns */
@@ -121,6 +127,7 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 };
 
 export const HIDDEN_TOOLS: Record<string, ToolFactory> = {
+	complete: createCompleteTool,
 	report_finding: () => reportFindingTool,
 	submit_review: () => submitReviewTool,
 };
@@ -131,13 +138,19 @@ export type ToolName = keyof typeof BUILTIN_TOOLS;
  * Create tools from BUILTIN_TOOLS registry.
  */
 export async function createTools(session: ToolSession, toolNames?: string[]): Promise<Tool[]> {
-	const requestedTools = toolNames && toolNames.length > 0 ? toolNames : undefined;
+	const includeComplete = session.requireCompleteTool === true;
+	const requestedTools = toolNames && toolNames.length > 0 ? [...new Set(toolNames)] : undefined;
 	const allTools: Record<string, ToolFactory> = { ...BUILTIN_TOOLS, ...HIDDEN_TOOLS };
+	if (includeComplete && requestedTools && !requestedTools.includes("complete")) {
+		requestedTools.push("complete");
+	}
+
 	const entries = requestedTools
-		? requestedTools
-				.filter((name, index) => requestedTools.indexOf(name) === index && name in allTools)
-				.map((name) => [name, allTools[name]] as const)
-		: Object.entries(BUILTIN_TOOLS);
+		? requestedTools.filter((name) => name in allTools).map((name) => [name, allTools[name]] as const)
+		: [
+				...Object.entries(BUILTIN_TOOLS),
+				...(includeComplete ? ([["complete", HIDDEN_TOOLS.complete]] as const) : []),
+			];
 	const results = await Promise.all(entries.map(([, factory]) => factory(session)));
 	const tools = results.filter((t): t is Tool => t !== null);
 

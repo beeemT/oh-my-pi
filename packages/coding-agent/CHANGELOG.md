@@ -1,6 +1,19 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+
+- Added `complete` tool for structured subagent output with JSON schema validation
+- Added `query` parameter to output tool for jq-like JSON querying
+- Added `output_schema` parameter to task tool for structured subagent completion
+- Added JTD (JSON Type Definition) to JSON Schema converter for schema flexibility
+- Added memorable two-word task identifiers (e.g., SwiftFalcon) for better task tracking
+
+### Changed
+
+- Changed task output IDs from `agent_index` format to memorable names for easier reference
+- Changed subagent completion flow to require explicit `complete` tool call with retry reminders
+- Simplified worker agent system prompt to be more concise and focused
 
 ## [3.24.0] - 2026-01-07
 ### Added

@@ -38,6 +38,11 @@ export type TaskItem = Static<typeof taskItemSchema>;
 /** Task tool parameters */
 export const taskSchema = Type.Object({
 	context: Type.Optional(Type.String({ description: "Shared context prepended to all task prompts" })),
+	output_schema: Type.Optional(
+		Type.Any({
+			description: "JSON schema for structured subagent output (used by the complete tool)",
+		}),
+	),
 	tasks: Type.Array(taskItemSchema, {
 		description: "Tasks to run in parallel",
 		maxItems: MAX_PARALLEL_TASKS,
@@ -85,6 +90,7 @@ export interface AgentDefinition {
 /** Progress tracking for a single agent */
 export interface AgentProgress {
 	index: number;
+	taskId: string;
 	agent: string;
 	agentSource: AgentSource;
 	status: "pending" | "running" | "completed" | "failed" | "aborted";
@@ -106,6 +112,7 @@ export interface AgentProgress {
 /** Result from a single agent execution */
 export interface SingleResult {
 	index: number;
+	taskId: string;
 	agent: string;
 	agentSource: AgentSource;
 	task: string;

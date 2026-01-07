@@ -21,7 +21,8 @@ Do NOT use when:
   - `"raw"` (default): Full output with ANSI codes preserved
   - `"json"`: Structured object with metadata
   - `"stripped"`: Plain text with ANSI codes removed for parsing
+- `query` (optional): jq-like query for JSON outputs (e.g., `.result.items[0].name`)
 - `offset` (optional): Line number to start reading from (1-indexed)
 - `limit` (optional): Maximum number of lines to read
 
-Use offset/limit for line ranges to reduce context usage on large outputs.
+Use offset/limit for line ranges to reduce context usage on large outputs. Use `query` for JSON outputs (for example, subagent `complete` results).

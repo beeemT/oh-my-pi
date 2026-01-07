@@ -21,6 +21,7 @@ import { formatDuration } from "../render-utils";
 import { cleanupTempDir, createTempArtifactsDir, getArtifactsDir } from "./artifacts";
 import { discoverAgents, getAgent } from "./discovery";
 import { runSubprocess } from "./executor";
+import { generateTaskName } from "./name-generator";
 import { mapWithConcurrencyLimit } from "./parallel";
 import { renderCall, renderResult } from "./render";
 import {
@@ -135,6 +136,7 @@ export async function createTaskTool(
 			const startTime = Date.now();
 			const { agents, projectAgentsDir } = await discoverAgents(session.cwd);
 			const context = params.context;
+			const outputSchema = params.output_schema;
 
 			// Handle empty or missing tasks
 			if (!params.tasks || params.tasks.length === 0) {
@@ -259,33 +261,36 @@ export async function createTaskTool(
 					}
 				}
 
-				// Initialize progress for all tasks
-				for (let i = 0; i < tasks.length; i++) {
-					const agentCfg = getAgent(agents, tasks[i].agent);
-					progressMap.set(i, {
-						index: i,
-						agent: tasks[i].agent,
-						agentSource: agentCfg?.source ?? "user",
-						status: "pending",
-						task: tasks[i].task,
-						recentTools: [],
-						recentOutput: [],
-						toolCount: 0,
-						tokens: 0,
-						durationMs: 0,
-						modelOverride: tasks[i].model,
-						description: tasks[i].description,
-					});
-				}
-				emitProgress();
-
-				// Build full prompts with context prepended
+				// Build full prompts with context prepended and generate task IDs
 				const tasksWithContext = tasks.map((t) => ({
 					agent: t.agent,
 					task: context ? `${context}\n\n${t.task}` : t.task,
 					model: t.model,
 					description: t.description,
+					taskId: generateTaskName(),
 				}));
+
+				// Initialize progress for all tasks
+				for (let i = 0; i < tasksWithContext.length; i++) {
+					const t = tasksWithContext[i];
+					const agentCfg = getAgent(agents, t.agent);
+					progressMap.set(i, {
+						index: i,
+						taskId: t.taskId,
+						agent: t.agent,
+						agentSource: agentCfg?.source ?? "user",
+						status: "pending",
+						task: t.task,
+						recentTools: [],
+						recentOutput: [],
+						toolCount: 0,
+						tokens: 0,
+						durationMs: 0,
+						modelOverride: t.model,
+						description: t.description,
+					});
+				}
+				emitProgress();
 
 				// Execute in parallel with concurrency limit
 				const results = await mapWithConcurrencyLimit(tasksWithContext, MAX_CONCURRENCY, async (task, index) => {
@@ -296,8 +301,10 @@ export async function createTaskTool(
 						task: task.task,
 						description: task.description,
 						index,
+						taskId: task.taskId,
 						context: undefined, // Already prepended above
 						modelOverride: task.model,
+						outputSchema,
 						sessionFile,
 						persistArtifacts: !!artifactsDir,
 						artifactsDir: effectiveArtifactsDir,
@@ -336,19 +343,17 @@ export async function createTaskTool(
 					const status = r.exitCode === 0 ? "completed" : `failed (exit ${r.exitCode})`;
 					const output = r.output.trim() || r.stderr.trim() || "(no output)";
 					const preview = output.split("\n").slice(0, 5).join("\n");
-					// Include output metadata and ID
-					const outputId = `${r.agent}_${r.index}`;
 					const meta = r.outputMeta
 						? ` [${r.outputMeta.lineCount} lines, ${formatBytes(r.outputMeta.charCount)}]`
 						: "";
-					return `[${r.agent}] ${status}${meta} ${outputId}\n${preview}`;
+					return `[${r.agent}] ${status}${meta} ${r.taskId}\n${preview}`;
 				});
 
 				const skippedNote =
 					skippedSelfRecursion > 0
 						? ` (${skippedSelfRecursion} ${blockedAgent} task${skippedSelfRecursion > 1 ? "s" : ""} skipped - self-recursion blocked)`
 						: "";
-				const outputIds = results.map((r) => `${r.agent}_${r.index}`);
+				const outputIds = results.map((r) => r.taskId);
 				const outputHint =
 					outputIds.length > 0 ? `\n\nUse output tool for full logs: output ids ${outputIds.join(", ")}` : "";
 				const summary = `${successCount}/${results.length} succeeded${skippedNote} [${formatDuration(

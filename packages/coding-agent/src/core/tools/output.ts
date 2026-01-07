@@ -36,6 +36,11 @@ const outputSchema = Type.Object({
 			description: "Output format: raw (default), json (structured), stripped (no ANSI)",
 		}),
 	),
+	query: Type.Optional(
+		Type.String({
+			description: "jq-like query for JSON outputs (e.g., .result.items[0].name). Requires JSON output.",
+		}),
+	),
 	offset: Type.Optional(
 		Type.Number({
 			description: "Line number to start reading from (1-indexed)",
@@ -70,6 +75,7 @@ interface OutputEntry {
 	provenance?: OutputProvenance;
 	previewLines?: string[];
 	range?: OutputRange;
+	query?: string;
 }
 
 export interface OutputToolDetails {
@@ -81,6 +87,77 @@ export interface OutputToolDetails {
 /** Strip ANSI escape codes from text */
 function stripAnsi(text: string): string {
 	return text.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
+function parseQuery(query: string): Array<string | number> {
+	let input = query.trim();
+	if (!input) return [];
+	if (input.startsWith(".")) input = input.slice(1);
+	if (!input) return [];
+
+	const tokens: Array<string | number> = [];
+	let i = 0;
+
+	const isIdentChar = (ch: string) => /[A-Za-z0-9_-]/.test(ch);
+
+	while (i < input.length) {
+		const ch = input[i];
+		if (ch === ".") {
+			i++;
+			continue;
+		}
+		if (ch === "[") {
+			const closeIndex = input.indexOf("]", i + 1);
+			if (closeIndex === -1) {
+				throw new Error(`Invalid query: missing ] in ${query}`);
+			}
+			const raw = input.slice(i + 1, closeIndex).trim();
+			if (!raw) {
+				throw new Error(`Invalid query: empty [] in ${query}`);
+			}
+			const quote = raw[0];
+			if ((quote === '"' || quote === "'") && raw.endsWith(quote)) {
+				let inner = raw.slice(1, -1);
+				inner = inner.replace(/\\(["'\\])/g, "$1");
+				tokens.push(inner);
+			} else if (/^\d+$/.test(raw)) {
+				tokens.push(Number(raw));
+			} else {
+				tokens.push(raw);
+			}
+			i = closeIndex + 1;
+			continue;
+		}
+
+		const start = i;
+		while (i < input.length && isIdentChar(input[i])) {
+			i++;
+		}
+		if (start === i) {
+			throw new Error(`Invalid query: unexpected token '${input[i]}' in ${query}`);
+		}
+		const ident = input.slice(start, i);
+		tokens.push(ident);
+	}
+
+	return tokens;
+}
+
+function applyQuery(data: unknown, query: string): unknown {
+	const tokens = parseQuery(query);
+	let current: unknown = data;
+	for (const token of tokens) {
+		if (current === null || current === undefined) return undefined;
+		if (typeof token === "number") {
+			if (!Array.isArray(current)) return undefined;
+			current = current[token];
+			continue;
+		}
+		if (typeof current !== "object") return undefined;
+		const record = current as Record<string, unknown>;
+		current = record[token];
+	}
+	return current;
 }
 
 /** List available output IDs in artifacts directory */
@@ -128,7 +205,13 @@ export function createOutputTool(session: ToolSession): AgentTool<typeof outputS
 		parameters: outputSchema,
 		execute: async (
 			_toolCallId: string,
-			params: { ids: string[]; format?: "raw" | "json" | "stripped"; offset?: number; limit?: number },
+			params: {
+				ids: string[];
+				format?: "raw" | "json" | "stripped";
+				query?: string;
+				offset?: number;
+				limit?: number;
+			},
 		): Promise<{ content: TextContent[]; details: OutputToolDetails }> => {
 			const sessionFile = session.getSessionFile();
 
@@ -150,7 +233,15 @@ export function createOutputTool(session: ToolSession): AgentTool<typeof outputS
 			const outputs: OutputEntry[] = [];
 			const notFound: string[] = [];
 			const outputContentById = new Map<string, string>();
-			const format = params.format ?? "raw";
+			const query = params.query?.trim();
+			const wantsQuery = query !== undefined && query.length > 0;
+			const format = params.format ?? (wantsQuery ? "json" : "raw");
+
+			if (wantsQuery && (params.offset !== undefined || params.limit !== undefined)) {
+				throw new Error("query cannot be combined with offset/limit");
+			}
+
+			const queryResults: Array<{ id: string; value: unknown }> = [];
 
 			for (const id of params.ids) {
 				const outputPath = path.join(artifactsDir, `${id}.out.md`);
@@ -168,7 +259,22 @@ export function createOutputTool(session: ToolSession): AgentTool<typeof outputS
 				let selectedContent = rawContent;
 				let range: OutputRange | undefined;
 
-				if (params.offset !== undefined || params.limit !== undefined) {
+				if (wantsQuery && query) {
+					let jsonValue: unknown;
+					try {
+						jsonValue = JSON.parse(rawContent);
+					} catch (err) {
+						const message = err instanceof Error ? err.message : String(err);
+						throw new Error(`Output ${id} is not valid JSON: ${message}`);
+					}
+					const value = applyQuery(jsonValue, query);
+					queryResults.push({ id, value });
+					try {
+						selectedContent = JSON.stringify(value, null, 2) ?? "null";
+					} catch {
+						selectedContent = String(value);
+					}
+				} else if (params.offset !== undefined || params.limit !== undefined) {
 					const startLine = Math.max(1, params.offset ?? 1);
 					if (startLine > totalLines) {
 						throw new Error(
@@ -186,11 +292,12 @@ export function createOutputTool(session: ToolSession): AgentTool<typeof outputS
 				outputs.push({
 					id,
 					path: outputPath,
-					lineCount: totalLines,
-					charCount: totalChars,
+					lineCount: wantsQuery ? selectedContent.split("\n").length : totalLines,
+					charCount: wantsQuery ? selectedContent.length : totalChars,
 					provenance: parseOutputProvenance(id),
 					previewLines: extractPreviewLines(selectedContent, 4),
 					range,
+					query: query,
 				});
 			}
 
@@ -212,15 +319,17 @@ export function createOutputTool(session: ToolSession): AgentTool<typeof outputS
 			let contentText: string;
 
 			if (format === "json") {
-				const jsonData = outputs.map((o) => ({
-					id: o.id,
-					lineCount: o.lineCount,
-					charCount: o.charCount,
-					provenance: o.provenance,
-					previewLines: o.previewLines,
-					range: o.range,
-					content: outputContentById.get(o.id) ?? "",
-				}));
+				const jsonData = wantsQuery
+					? queryResults
+					: outputs.map((o) => ({
+							id: o.id,
+							lineCount: o.lineCount,
+							charCount: o.charCount,
+							provenance: o.provenance,
+							previewLines: o.previewLines,
+							range: o.range,
+							content: outputContentById.get(o.id) ?? "",
+						}));
 				contentText = JSON.stringify(jsonData, null, 2);
 			} else {
 				// raw or stripped
@@ -257,6 +366,7 @@ export function createOutputTool(session: ToolSession): AgentTool<typeof outputS
 interface OutputRenderArgs {
 	ids: string[];
 	format?: "raw" | "json" | "stripped";
+	query?: string;
 	offset?: number;
 	limit?: number;
 }
@@ -285,6 +395,7 @@ export const outputToolRenderer = {
 
 		const meta: string[] = [];
 		if (args.format && args.format !== "raw") meta.push(`format:${args.format}`);
+		if (args.query) meta.push(`query:${args.query}`);
 		if (args.offset !== undefined) meta.push(`offset:${args.offset}`);
 		if (args.limit !== undefined) meta.push(`limit:${args.limit}`);
 		text += formatMeta(meta, uiTheme);

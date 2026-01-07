@@ -16,8 +16,9 @@ The Task tool launches specialized agents (workers) that autonomously handle com
 ## Usage Notes
 
 - Always include a short description of the task in the task parameter
-- **Plan-then-execute**: Put shared constraints in `context`, keep each task focused, specify output format and acceptance criteria
+- **Plan-then-execute**: Put shared constraints in `context`, keep each task focused, specify acceptance criteria; use `output_schema` when you need structured output
 - **Minimize tool chatter**: Avoid repeating large context; use Output tool with output ids for full logs
+- **Structured completion**: If `output_schema` is provided, subagents must call `complete` to finish
 - **Parallelize**: Launch multiple agents concurrently whenever possible
 - **Results are intermediate data**: Agent findings provide context for YOU to perform actual work. Do not treat agent reports as "task complete" signals.
 - **Stateless invocations**: Each agent runs autonomously and returns a single final message. Include all necessary context and specify exactly what information to return.
@@ -30,6 +31,7 @@ The Task tool launches specialized agents (workers) that autonomously handle com
 - `tasks`: Array of `{agent, task, description?, model?}` - tasks to run in parallel (max {{MAX_PARALLEL_TASKS}}, {{MAX_CONCURRENCY}} concurrent)
   - `model`: (optional) Override the agent's default model with fuzzy matching (e.g., "sonnet", "codex", "5.2"). Supports comma-separated fallbacks: "gpt, opus" tries gpt first, then opus. Use "default" for omp's default model
 - `context`: (optional) Shared context string prepended to all task prompts - use this to avoid repeating instructions
+- `output_schema`: (optional) JSON schema for structured subagent output (used by the complete tool)
 
 ## Examples
 
