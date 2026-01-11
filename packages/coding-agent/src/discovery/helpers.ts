@@ -4,6 +4,7 @@
 
 import { join, resolve } from "path";
 import { parse as parseYAML } from "yaml";
+import type { Skill, SkillFrontmatter } from "../capability/skill";
 import type { LoadContext, LoadResult, SourceMeta } from "../capability/types";
 
 /**
@@ -124,6 +125,56 @@ export function parseFrontmatter(content: string): {
 		// Fallback to empty frontmatter on parse error
 		return { frontmatter: {}, body, raw };
 	}
+}
+
+export function loadSkillsFromDir(
+	ctx: LoadContext,
+	options: {
+		dir: string;
+		providerId: string;
+		level: "user" | "project";
+		requireDescription?: boolean;
+	},
+): LoadResult<Skill> {
+	const items: Skill[] = [];
+	const warnings: string[] = [];
+	const { dir, level, providerId, requireDescription = false } = options;
+
+	if (!ctx.fs.isDir(dir)) {
+		return { items, warnings };
+	}
+
+	for (const name of ctx.fs.readDir(dir)) {
+		if (name.startsWith(".") || name === "node_modules") continue;
+
+		const skillDir = join(dir, name);
+		if (!ctx.fs.isDir(skillDir)) continue;
+
+		const skillFile = join(skillDir, "SKILL.md");
+		if (!ctx.fs.isFile(skillFile)) continue;
+
+		const content = ctx.fs.readFile(skillFile);
+		if (!content) {
+			warnings.push(`Failed to read ${skillFile}`);
+			continue;
+		}
+
+		const { frontmatter, body } = parseFrontmatter(content);
+		if (requireDescription && !frontmatter.description) {
+			continue;
+		}
+
+		items.push({
+			name: (frontmatter.name as string) || name,
+			path: skillFile,
+			content: body,
+			frontmatter: frontmatter as SkillFrontmatter,
+			level,
+			_source: createSourceMeta(providerId, skillFile, level),
+		});
+	}
+
+	return { items, warnings };
 }
 
 /**
@@ -286,7 +337,7 @@ export function discoverExtensionModulePaths(ctx: LoadContext, dir: string): str
 	const discovered: string[] = [];
 
 	for (const name of ctx.fs.readDir(dir)) {
-		if (name.startsWith(".")) continue;
+		if (name.startsWith(".") || name === "node_modules") continue;
 
 		const entryPath = join(dir, name);
 

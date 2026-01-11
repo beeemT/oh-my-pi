@@ -33,6 +33,7 @@ import {
 	discoverExtensionModulePaths,
 	getExtensionNameFromPath,
 	loadFilesFromDir,
+	loadSkillsFromDir,
 	parseFrontmatter,
 	SOURCE_PATHS,
 } from "./helpers";
@@ -209,51 +210,25 @@ function loadSkills(ctx: LoadContext): LoadResult<Skill> {
 	const items: Skill[] = [];
 	const warnings: string[] = [];
 
-	// User level: ~/.codex/skills/
 	const userSkillsDir = join(ctx.home, SOURCE_PATHS.codex.userBase, "skills");
-	const userResult = loadFilesFromDir(ctx, userSkillsDir, PROVIDER_ID, "user", {
-		extensions: ["md"],
-		recursive: true,
-		transform: (name, content, path, source) => {
-			const { frontmatter, body } = parseFrontmatter(content);
-			const skillName = frontmatter.name || name.replace(/\.md$/, "");
-
-			return {
-				name: String(skillName),
-				path,
-				content: body,
-				frontmatter,
-				level: "user" as const,
-				_source: source,
-			};
-		},
+	const userResult = loadSkillsFromDir(ctx, {
+		dir: userSkillsDir,
+		providerId: PROVIDER_ID,
+		level: "user",
 	});
 	items.push(...userResult.items);
-	warnings.push(...(userResult.warnings || []));
+	if (userResult.warnings) warnings.push(...userResult.warnings);
 
-	// Project level: .codex/skills/
 	const codexDir = ctx.fs.walkUp(".codex", { dir: true });
 	if (codexDir) {
 		const projectSkillsDir = join(codexDir, "skills");
-		const projectResult = loadFilesFromDir(ctx, projectSkillsDir, PROVIDER_ID, "project", {
-			extensions: ["md"],
-			recursive: true,
-			transform: (name, content, path, source) => {
-				const { frontmatter, body } = parseFrontmatter(content);
-				const skillName = frontmatter.name || name.replace(/\.md$/, "");
-
-				return {
-					name: String(skillName),
-					path,
-					content: body,
-					frontmatter,
-					level: "project" as const,
-					_source: source,
-				};
-			},
+		const projectResult = loadSkillsFromDir(ctx, {
+			dir: projectSkillsDir,
+			providerId: PROVIDER_ID,
+			level: "project",
 		});
 		items.push(...projectResult.items);
-		warnings.push(...(projectResult.warnings || []));
+		if (projectResult.warnings) warnings.push(...projectResult.warnings);
 	}
 
 	return { items, warnings };

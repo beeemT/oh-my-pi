@@ -5,7 +5,7 @@
  * .pi is an alias for backwards compatibility.
  */
 
-import { basename, dirname, isAbsolute, join, resolve } from "path";
+import { dirname, isAbsolute, join, resolve } from "path";
 import { type ContextFile, contextFileCapability } from "../capability/context-file";
 import { type Extension, type ExtensionManifest, extensionCapability } from "../capability/extension";
 import { type ExtensionModule, extensionModuleCapability } from "../capability/extension-module";
@@ -16,7 +16,7 @@ import { type MCPServer, mcpCapability } from "../capability/mcp";
 import { type Prompt, promptCapability } from "../capability/prompt";
 import { type Rule, ruleCapability } from "../capability/rule";
 import { type Settings, settingsCapability } from "../capability/settings";
-import { type Skill, type SkillFrontmatter, skillCapability } from "../capability/skill";
+import { type Skill, skillCapability } from "../capability/skill";
 import { type SlashCommand, slashCommandCapability } from "../capability/slash-command";
 import { type SystemPrompt, systemPromptCapability } from "../capability/system-prompt";
 import { type CustomTool, toolCapability } from "../capability/tool";
@@ -27,6 +27,7 @@ import {
 	expandEnvVarsDeep,
 	getExtensionNameFromPath,
 	loadFilesFromDir,
+	loadSkillsFromDir,
 	parseFrontmatter,
 	parseJSON,
 	SOURCE_PATHS,
@@ -190,64 +191,18 @@ registerProvider<SystemPrompt>(systemPromptCapability.id, {
 });
 
 // Skills
-function loadSkillFromFile(ctx: LoadContext, path: string, level: "user" | "project"): Skill | null {
-	const content = ctx.fs.readFile(path);
-	if (!content) return null;
-
-	const { frontmatter, body } = parseFrontmatter(content);
-	const skillDir = dirname(path);
-	const parentDirName = basename(skillDir);
-	const name = (frontmatter.name as string) || parentDirName;
-
-	if (!frontmatter.description) return null;
-
-	return {
-		name,
-		path,
-		content: body,
-		frontmatter: frontmatter as SkillFrontmatter,
-		level,
-		_source: createSourceMeta(PROVIDER_ID, path, level),
-	};
-}
-
-function loadSkillsRecursive(ctx: LoadContext, dir: string, level: "user" | "project"): LoadResult<Skill> {
-	const items: Skill[] = [];
-	const warnings: string[] = [];
-
-	if (!ctx.fs.isDir(dir)) return { items, warnings };
-
-	for (const name of ctx.fs.readDir(dir)) {
-		if (name.startsWith(".") || name === "node_modules") continue;
-
-		const path = join(dir, name);
-
-		if (ctx.fs.isDir(path)) {
-			const skillFile = join(path, "SKILL.md");
-			if (ctx.fs.isFile(skillFile)) {
-				const skill = loadSkillFromFile(ctx, skillFile, level);
-				if (skill) items.push(skill);
-			}
-
-			const sub = loadSkillsRecursive(ctx, path, level);
-			items.push(...sub.items);
-			if (sub.warnings) warnings.push(...sub.warnings);
-		} else if (name === "SKILL.md") {
-			const skill = loadSkillFromFile(ctx, path, level);
-			if (skill) items.push(skill);
-		}
-	}
-
-	return { items, warnings };
-}
-
 function loadSkills(ctx: LoadContext): LoadResult<Skill> {
 	const items: Skill[] = [];
 	const warnings: string[] = [];
 
 	for (const { dir, level } of getConfigDirs(ctx)) {
 		const skillsDir = join(dir, "skills");
-		const result = loadSkillsRecursive(ctx, skillsDir, level);
+		const result = loadSkillsFromDir(ctx, {
+			dir: skillsDir,
+			providerId: PROVIDER_ID,
+			level,
+			requireDescription: true,
+		});
 		items.push(...result.items);
 		if (result.warnings) warnings.push(...result.warnings);
 	}

@@ -33,6 +33,7 @@ If you discussed requirements, plans, schemas, or decisions with the user, you M
 - **Minimize tool chatter**: Avoid repeating large context; use Output tool with output ids for full logs
 - **Structured completion**: If `output` is provided, subagents must call `complete` to finish
 - **Parallelize**: Launch multiple agents concurrently whenever possible
+- **Isolate file scopes**: Assign each task distinct files or directories so agents don't conflict
 - **Results are intermediate data**: Agent findings provide context for YOU to perform actual work. Do not treat agent reports as "task complete" signals.
 - **Stateless invocations**: Subagents have zero memory of your conversation. Pass ALL relevant context: requirements discussed, decisions made, schemas agreed upon, file paths mentioned. If you reference something from earlier discussion without including it, the subagent will fail.
 - **Trust outputs**: Agent results should generally be trusted

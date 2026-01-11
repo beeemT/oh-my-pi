@@ -24,7 +24,7 @@ import {
 	expandEnvVarsDeep,
 	getExtensionNameFromPath,
 	loadFilesFromDir,
-	parseFrontmatter,
+	loadSkillsFromDir,
 	parseJSON,
 } from "./helpers";
 
@@ -218,78 +218,25 @@ function loadSkills(ctx: LoadContext): LoadResult<Skill> {
 	const items: Skill[] = [];
 	const warnings: string[] = [];
 
-	// User-level: ~/.claude/skills/*/SKILL.md
-	const userBase = getUserClaude(ctx);
-	const userSkillsDir = join(userBase, "skills");
+	const userSkillsDir = join(getUserClaude(ctx), "skills");
+	const userResult = loadSkillsFromDir(ctx, {
+		dir: userSkillsDir,
+		providerId: PROVIDER_ID,
+		level: "user",
+	});
+	items.push(...userResult.items);
+	if (userResult.warnings) warnings.push(...userResult.warnings);
 
-	if (ctx.fs.isDir(userSkillsDir)) {
-		const skillDirs = ctx.fs.readDir(userSkillsDir);
-
-		for (const dirName of skillDirs) {
-			if (dirName.startsWith(".")) continue;
-
-			const skillDir = join(userSkillsDir, dirName);
-			if (!ctx.fs.isDir(skillDir)) continue;
-
-			const skillFile = join(skillDir, "SKILL.md");
-			if (!ctx.fs.isFile(skillFile)) continue;
-
-			const content = ctx.fs.readFile(skillFile);
-			if (!content) {
-				warnings.push(`Failed to read ${skillFile}`);
-				continue;
-			}
-
-			const { frontmatter, body } = parseFrontmatter(content);
-			const name = (frontmatter.name as string) || dirName;
-
-			items.push({
-				name,
-				path: skillFile,
-				content: body,
-				frontmatter,
-				level: "user",
-				_source: createSourceMeta(PROVIDER_ID, skillFile, "user"),
-			});
-		}
-	}
-
-	// Project-level: <project>/.claude/skills/*/SKILL.md
 	const projectBase = getProjectClaude(ctx);
 	if (projectBase) {
 		const projectSkillsDir = join(projectBase, "skills");
-
-		if (ctx.fs.isDir(projectSkillsDir)) {
-			const skillDirs = ctx.fs.readDir(projectSkillsDir);
-
-			for (const dirName of skillDirs) {
-				if (dirName.startsWith(".")) continue;
-
-				const skillDir = join(projectSkillsDir, dirName);
-				if (!ctx.fs.isDir(skillDir)) continue;
-
-				const skillFile = join(skillDir, "SKILL.md");
-				if (!ctx.fs.isFile(skillFile)) continue;
-
-				const content = ctx.fs.readFile(skillFile);
-				if (!content) {
-					warnings.push(`Failed to read ${skillFile}`);
-					continue;
-				}
-
-				const { frontmatter, body } = parseFrontmatter(content);
-				const name = (frontmatter.name as string) || dirName;
-
-				items.push({
-					name,
-					path: skillFile,
-					content: body,
-					frontmatter,
-					level: "project",
-					_source: createSourceMeta(PROVIDER_ID, skillFile, "project"),
-				});
-			}
-		}
+		const projectResult = loadSkillsFromDir(ctx, {
+			dir: projectSkillsDir,
+			providerId: PROVIDER_ID,
+			level: "project",
+		});
+		items.push(...projectResult.items);
+		if (projectResult.warnings) warnings.push(...projectResult.warnings);
 	}
 
 	return { items, warnings };

@@ -1,7 +1,6 @@
 # Changelog
 
 ## [Unreleased]
-
 ### Added
 
 - Added automatic discovery and listing of AGENTS.md files in the system prompt, providing agents with an authoritative list of project-specific instruction files without runtime searching
@@ -9,10 +8,14 @@
 
 ### Changed
 
+- Refactored skill discovery to use unified `loadSkillsFromDir` helper across all providers, reducing code duplication
+- Updated skill discovery to scan only `skills/*/SKILL.md` entries instead of recursive walks in Codex provider
+- Added guidance to Task tool documentation to isolate file scopes when assigning tasks to prevent agent conflicts
 - Updated Task tool documentation to emphasize that subagents have no access to conversation history and require all relevant context to be explicitly passed
 - Revised task agent prompt to clarify that subagents have full tool access and can make file edits, run commands, and create files
 - OpenAI Codex: updated to use bundled system prompt from upstream
 - Changed `complete` tool to make `data` parameter optional when aborting, while still requiring it for successful completions
+- Skills discovery now scans only `skills/*/SKILL.md` entries instead of recursive walks
 
 ### Removed
 
