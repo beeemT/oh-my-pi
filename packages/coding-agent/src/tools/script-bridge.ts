@@ -51,11 +51,7 @@ export class ToolBridgeServer {
 	#server: ReturnType<typeof Bun.serve> | null = null;
 	#port = 0;
 
-	async start(
-		getTools: () => AgentTool<any>[],
-		signal: AbortSignal,
-		context?: AgentToolContext,
-	): Promise<number> {
+	async start(getTools: () => AgentTool<any>[], signal: AbortSignal, context?: AgentToolContext): Promise<number> {
 		this.#port = await allocatePort();
 
 		this.#server = Bun.serve({
@@ -99,10 +95,7 @@ export class ToolBridgeServer {
 							arguments: args,
 						});
 					} catch (err) {
-						return Response.json(
-							{ error: err instanceof Error ? err.message : String(err) },
-							{ status: 422 },
-						);
+						return Response.json({ error: err instanceof Error ? err.message : String(err) }, { status: 422 });
 					}
 
 					try {

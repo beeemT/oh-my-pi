@@ -15,8 +15,8 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@oh-my-pi/pi-agent-core";
-import { type Static, Type } from "@sinclair/typebox";
 import { logger } from "@oh-my-pi/pi-utils";
+import { type Static, Type } from "@sinclair/typebox";
 import scriptDescription from "../prompts/tools/script.md" with { type: "text" };
 import type { ToolSession } from "./index";
 import { ToolBridgeServer } from "./script-bridge";
@@ -29,9 +29,7 @@ const scriptSchema = Type.Object({
 		description:
 			"JavaScript code to execute. Named async tool functions (bash, read, write, edit, grep, find, fetch, web_search, lsp, browser, …) are available directly. Use `await tools.name(args)` for MCP or dynamically loaded tools. Call `listTools()` to discover all available tools. Use `return` or `console.log` for output.",
 	}),
-	timeout: Type.Optional(
-		Type.Number({ description: "Maximum execution time in seconds (default: 30)" }),
-	),
+	timeout: Type.Optional(Type.Number({ description: "Maximum execution time in seconds (default: 30)" })),
 });
 
 type ScriptParams = Static<typeof scriptSchema>;
@@ -122,9 +120,7 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 		// Combine the parent abort signal with a per-execution timeout
 		const timeoutController = new AbortController();
 		const timeoutHandle = setTimeout(() => timeoutController.abort(), timeoutMs);
-		const effectiveSignal = signal
-			? AbortSignal.any([signal, timeoutController.signal])
-			: timeoutController.signal;
+		const effectiveSignal = signal ? AbortSignal.any([signal, timeoutController.signal]) : timeoutController.signal;
 
 		// Only expose tools that make sense inside a script
 		const getFilteredTools = () => {
