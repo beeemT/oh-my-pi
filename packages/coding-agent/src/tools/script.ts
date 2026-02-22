@@ -18,6 +18,7 @@ import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallb
 import { logger } from "@oh-my-pi/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import scriptDescription from "../prompts/tools/script.md" with { type: "text" };
+import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
 import type { ToolSession } from "./index";
 import { ToolBridgeServer } from "./script-bridge";
 import { ToolAbortError } from "./tool-errors";
@@ -112,7 +113,7 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 		_toolCallId: string,
 		params: ScriptParams,
 		signal?: AbortSignal,
-		_onUpdate?: AgentToolUpdateCallback<ScriptToolDetails>,
+		onUpdate?: AgentToolUpdateCallback<ScriptToolDetails>,
 		context?: AgentToolContext,
 	): Promise<AgentToolResult<ScriptToolDetails>> {
 		const timeoutMs = (params.timeout ?? 30) * 1000;
@@ -156,7 +157,40 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 			};
 			effectiveSignal.addEventListener("abort", onAbort, { once: true });
 
-			const exitCode = await child.exited;
+			// Stream stdout concurrently with process execution, feeding live previews
+			// through onUpdate (same tail-buffered pattern as bash).
+			const stdoutParts: string[] = [];
+			const tailBuffer = new TailBuffer(DEFAULT_MAX_BYTES);
+			const decoder = new TextDecoder();
+
+			const readStdoutStream = async () => {
+				const reader = (child.stdout as ReadableStream<Uint8Array>).getReader();
+				try {
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
+						const chunk = decoder.decode(value, { stream: true });
+						stdoutParts.push(chunk);
+						tailBuffer.append(chunk);
+						onUpdate?.({
+							content: [{ type: "text", text: tailBuffer.text() }],
+							details: { exitCode: undefined },
+						});
+					}
+					const tail = decoder.decode();
+					if (tail) {
+						stdoutParts.push(tail);
+						tailBuffer.append(tail);
+					}
+				} catch {
+					// Stream closed or aborted — ignore
+				} finally {
+					reader.releaseLock();
+				}
+			};
+
+			const [exitCode] = await Promise.all([child.exited, readStdoutStream()]);
+			const stdout = stdoutParts.join("");
 
 			effectiveSignal.removeEventListener("abort", onAbort);
 			clearTimeout(timeoutHandle);
@@ -167,17 +201,11 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 
 			if (timeoutController.signal.aborted) {
 				return {
-					content: [
-						{
-							type: "text",
-							text: `Script timed out after ${params.timeout ?? 30}s`,
-						},
-					],
+					content: [{ type: "text", text: `Script timed out after ${params.timeout ?? 30}s` }],
 					details: { exitCode: undefined },
 				};
 			}
 
-			const stdout = await new Response(child.stdout as ReadableStream).text();
 			const stderr = await new Response(child.stderr as ReadableStream).text();
 
 			logger.debug("Script execution complete", { exitCode, stdoutLen: stdout.length });

@@ -717,6 +717,7 @@
 
 ### Added
 
+- Added `script` tool for programmatic multi-tool orchestration: write JavaScript that calls registered tools as async functions, with subprocess isolation, timeout control, and support for dynamically loaded MCP tools via the `tools` proxy
 - Added `poll_jobs` tool to block until background jobs complete, providing an alternative to polling `read jobs://` in loops
 - Added `task.maxConcurrency` setting to limit the number of concurrently executing subagent tasks
 - Added support for rendering markdown output from Python cells with proper formatting and theme styling
