@@ -29,6 +29,7 @@ import { wrapToolWithMetaNotice } from "./output-meta";
 import { PythonTool } from "./python";
 import { ReadTool } from "./read";
 import { reportFindingTool } from "./review";
+import { ScriptTool } from "./script";
 import { loadSshTool } from "./ssh";
 import { SubmitResultTool } from "./submit-result";
 import { type TodoPhase, TodoWriteTool } from "./todo-write";
@@ -39,15 +40,10 @@ import { WriteTool } from "./write";
 export { exaTools } from "../exa";
 export type { ExaRenderDetails, ExaSearchResponse, ExaSearchResult } from "../exa/types";
 export {
-	type FileDiagnosticsResult,
-	type FileFormatResult,
-	getLspStatus,
-	type LspServerStatus,
-	LspTool,
-	type LspToolDetails,
-	type LspWarmupOptions,
-	type LspWarmupResult,
-	warmupLspServers,
+    getLspStatus, LspTool, warmupLspServers, type FileDiagnosticsResult,
+    type FileFormatResult, type LspServerStatus, type LspToolDetails,
+    type LspWarmupOptions,
+    type LspWarmupResult
 } from "../lsp";
 export { EditTool, type EditToolDetails } from "../patch";
 export * from "../session/streaming-output";
@@ -59,23 +55,21 @@ export { BashTool, type BashToolDetails, type BashToolInput, type BashToolOption
 export { BrowserTool, type BrowserToolDetails } from "./browser";
 export { CalculatorTool, type CalculatorToolDetails } from "./calculator";
 export { CancelJobTool, type CancelJobToolDetails } from "./cancel-job";
-export { type ExitPlanModeDetails, ExitPlanModeTool } from "./exit-plan-mode";
+export { ExitPlanModeTool, type ExitPlanModeDetails } from "./exit-plan-mode";
 export { FetchTool, type FetchToolDetails } from "./fetch";
-export { type FindOperations, FindTool, type FindToolDetails, type FindToolInput, type FindToolOptions } from "./find";
+export { FindTool, type FindOperations, type FindToolDetails, type FindToolInput, type FindToolOptions } from "./find";
 export { setPreferredImageProvider } from "./gemini-image";
 export { GrepTool, type GrepToolDetails, type GrepToolInput } from "./grep";
 export { NotebookTool, type NotebookToolDetails } from "./notebook";
 export { PythonTool, type PythonToolDetails, type PythonToolOptions } from "./python";
 export { ReadTool, type ReadToolDetails, type ReadToolInput } from "./read";
 export { reportFindingTool, type SubmitReviewDetails } from "./review";
-export { loadSshTool, type SSHToolDetails, SshTool } from "./ssh";
+export { ScriptTool, type ScriptToolDetails } from "./script";
+export { loadSshTool, SshTool, type SSHToolDetails } from "./ssh";
 export { SubmitResultTool } from "./submit-result";
 export {
-	getLatestTodoPhasesFromEntries,
-	type TodoItem,
-	type TodoPhase,
-	TodoWriteTool,
-	type TodoWriteToolDetails,
+    getLatestTodoPhasesFromEntries, TodoWriteTool, type TodoItem,
+    type TodoPhase, type TodoWriteToolDetails
 } from "./todo-write";
 export { WriteTool, type WriteToolDetails, type WriteToolInput } from "./write";
 
@@ -150,6 +144,15 @@ export interface ToolSession {
 	getTodoPhases?: () => TodoPhase[];
 	/** Replace cached todo phases for this session. */
 	setTodoPhases?: (phases: TodoPhase[]) => void;
+	/**
+	 * Returns the currently active AgentTool instances for this session.
+	 *
+	 * Lazy getter rather than a static list: tools may be added dynamically
+	 * (e.g. MCP servers activated by a future tool_search tool) after the
+	 * ToolSession is constructed. ScriptTool reads this at execution time so
+	 * that the script bridge always reflects the live tool registry.
+	 */
+	getTools?: () => import("@oh-my-pi/pi-agent-core").AgentTool<any>[];
 }
 
 type ToolFactory = (session: ToolSession) => Tool | null | Promise<Tool | null>;
@@ -174,6 +177,7 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	fetch: s => new FetchTool(s),
 	web_search: s => new SearchTool(s),
 	write: s => new WriteTool(s),
+	script: ScriptTool.create,
 };
 
 export const HIDDEN_TOOLS: Record<string, ToolFactory> = {

@@ -1,0 +1,148 @@
+/**
+ * Script worker — runs inside an isolated Bun subprocess.
+ *
+ * Receives:
+ *   OMP_BRIDGE_PORT   — port of the parent's ToolBridgeServer
+ *   OMP_SCRIPT_FILE   — path to the .ts file containing the model-authored code
+ *
+ * Exposes to the script:
+ *   • Named async functions for each tool registered at startup time
+ *     (e.g. bash, read, write, grep, find, edit, fetch, web_search, lsp, browser)
+ *   • tools proxy — property access returns a call function; live lookup at call
+ *     time so tools activated after startup (MCP, tool_search) work transparently
+ *   • listTools() — returns [{name, description}] from the live bridge registry
+ *
+ * Output:
+ *   stdout — console.log output followed by the script return value (if any)
+ *   stderr — uncaught errors; non-zero exit signals failure to the parent
+ */
+
+const BRIDGE_PORT = parseInt(Bun.env.OMP_BRIDGE_PORT ?? "0");
+const SCRIPT_FILE = Bun.env.OMP_SCRIPT_FILE ?? "";
+
+if (!BRIDGE_PORT || !SCRIPT_FILE) {
+	process.stderr.write("omp-script-worker: missing OMP_BRIDGE_PORT or OMP_SCRIPT_FILE\n");
+	process.exit(1);
+}
+
+const BRIDGE_BASE = `http://127.0.0.1:${BRIDGE_PORT}`;
+
+// ── Bridge client ─────────────────────────────────────────────────────────────
+
+async function callBridge(name: string, args: unknown): Promise<string> {
+	let res: Response;
+	try {
+		res = await fetch(`${BRIDGE_BASE}/tool/${encodeURIComponent(name)}`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(args ?? {}),
+		});
+	} catch (err) {
+		// Connection refused means parent was aborted/killed
+		throw new Error(`Script bridge unreachable (${err instanceof Error ? err.message : String(err)})`);
+	}
+
+	const data = (await res.json()) as { content: string; isError: boolean; error?: string };
+
+	if (!res.ok) {
+		throw new Error(data.error ?? `Tool '${name}' failed with HTTP ${res.status}`);
+	}
+	if (data.isError) {
+		throw new Error(data.content || `Tool '${name}' returned an error`);
+	}
+	return data.content;
+}
+
+interface ToolInfo {
+	name: string;
+	description: string;
+}
+
+async function listTools(): Promise<ToolInfo[]> {
+	const res = await fetch(`${BRIDGE_BASE}/tools`);
+	if (!res.ok) throw new Error(`Failed to list tools: HTTP ${res.status}`);
+	return res.json() as Promise<ToolInfo[]>;
+}
+
+// ── tools proxy ───────────────────────────────────────────────────────────────
+//
+// Any property access returns a function that calls the bridge with that tool
+// name. Since the bridge does a live getTools() lookup on every request, tools
+// activated after worker startup (dynamic MCP servers, tool_search results) are
+// accessible automatically — no manifest staleness possible.
+
+const tools = new Proxy({} as Record<string, (args?: unknown) => Promise<string>>, {
+	get(_, prop) {
+		// Don't intercept Promise/thennable protocol or symbol keys
+		if (typeof prop === "symbol") return undefined;
+		if (prop === "then" || prop === "catch" || prop === "finally") return undefined;
+		return (args?: unknown) => callBridge(prop, args ?? {});
+	},
+	has(_, prop) {
+		return typeof prop === "string";
+	},
+});
+
+// ── Console capture ───────────────────────────────────────────────────────────
+
+const logLines: string[] = [];
+
+const origLog = console.log.bind(console);
+const origWarn = console.warn.bind(console);
+const origError = console.error.bind(console);
+
+/* eslint-disable no-console */
+console.log = (...args: unknown[]) => logLines.push(args.map(a => String(a)).join(" "));
+console.warn = (...args: unknown[]) => logLines.push(args.map(a => String(a)).join(" "));
+console.error = (...args: unknown[]) => logLines.push(args.map(a => String(a)).join(" "));
+/* eslint-enable no-console */
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+async function main(): Promise<void> {
+	// Fetch manifest for named closures (snapshot at startup for ergonomics)
+	const manifest = await listTools();
+
+	// Named async function for every currently registered tool
+	const namedFns: Record<string, (args?: unknown) => Promise<string>> = {};
+	for (const { name } of manifest) {
+		// Sanitise name to a valid JS identifier — MCP tool names are already
+		// snake_case (mcp_server_tool) so this is mostly a safety guard.
+		const safe = name.replace(/[^a-zA-Z0-9_$]/g, "_");
+		namedFns[safe] = (args?: unknown) => callBridge(name, args ?? {});
+	}
+
+	const code = await Bun.file(SCRIPT_FILE).text();
+
+	const paramNames = [...Object.keys(namedFns), "tools", "listTools"];
+	const paramValues: unknown[] = [...Object.values(namedFns), tools, listTools];
+
+	// Execute — new Function gives the code its own scope with only what we inject.
+	// The subprocess env already has no API keys or session secrets.
+	const fn = new Function(...paramNames, `return (async () => {\n${code}\n})()`);
+
+	let returnValue: unknown;
+	try {
+		returnValue = await (fn as (...a: unknown[]) => Promise<unknown>)(...paramValues);
+	} finally {
+		console.log = origLog;
+		console.warn = origWarn;
+		console.error = origError;
+	}
+
+	// Compose output: console lines + return value
+	const parts: string[] = [];
+	if (logLines.length > 0) parts.push(logLines.join("\n"));
+	if (returnValue !== undefined && returnValue !== null) parts.push(String(returnValue));
+
+	const output = parts.join("\n").trim();
+	if (output) process.stdout.write(output);
+}
+
+main().catch(err => {
+	console.log = origLog;
+	console.warn = origWarn;
+	console.error = origError;
+	process.stderr.write(err instanceof Error ? err.message : String(err));
+	process.exit(1);
+});
