@@ -39,13 +39,11 @@ const available = await listTools();
 ```
 
 ## Output
-
 - `console.log(...)` output is collected and returned
 - A `return` value is appended to the output
 - Errors thrown from the script or from tool calls surface as tool errors
 
 ## Patterns
-
 **Sequential pipeline:**
 ```javascript
 const files = JSON.parse(await find({ pattern: "src/**/*.ts" }));
@@ -59,14 +57,12 @@ for (const f of files) {
 }
 return `${count} files have TODOs`;
 ```
-
 **Parallel execution:**
 ```javascript
 const files = JSON.parse(await find({ pattern: "*.md" }));
 const results = await Promise.all(files.map(f => read({ path: f })));
 return results.filter(c => c.includes("deprecated")).length + " files mention deprecated";
 ```
-
 **Conditional logic on tool output:**
 ```javascript
 const status = await bash({ command: "git status --porcelain" });
@@ -76,7 +72,6 @@ if (status.trim() === "") {
 const diff = await bash({ command: "git diff HEAD" });
 return diff;
 ```
-
 **Using a dynamically activated MCP tool:**
 ```javascript
 // After a tool_search call has activated an MCP server:
