@@ -42,6 +42,7 @@ const available = await listTools();
 - `console.log(...)` output is collected and returned
 - A `return` value is appended to the output
 - Errors thrown from the script or from tool calls surface as tool errors
+- Default timeout is **30 seconds**. For scripts that read many files, run shell commands, or call slow tools, set `timeout` explicitly: `{ code: "...", timeout: 120 }`. Maximum useful values are task-dependent; large codebase scans may need 120–300s.
 
 ## Patterns
 **Sequential pipeline:**

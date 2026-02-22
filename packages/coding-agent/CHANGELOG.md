@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- Added `script` tool for programmatic multi-tool orchestration: write JavaScript that calls registered tools as async functions, with subprocess isolation, timeout control, and support for dynamically loaded MCP tools via the `tools` proxy
+
 ## [13.2.0] - 2026-02-23
 ### Breaking Changes
 
@@ -20,6 +23,7 @@
 
 - Fixed bash internal URL expansion to resolve `local://` targets to concrete filesystem paths, including newly created destination files for commands like `mv src.json local://dest.json`
 - Fixed bash local URL resolution to create missing parent directories under the session local root before command execution, preventing `mv` destination failures for new paths
+
 ## [13.1.0] - 2026-02-23
 ### Breaking Changes
 
@@ -35,7 +39,6 @@
 - Reformatted system prompt template to use markdown headings instead of XML tags for skills, preloaded skills, and rules sections
 - Renamed `deviceScaleFactor` parameter to `device_scale_factor` in browser viewport configuration for consistency with snake_case naming convention
 - Moved intent field documentation from per-tool JSON schema descriptions into a single system prompt block, reducing token overhead proportional to tool count
-
 ## [13.0.1] - 2026-02-22
 ### Changed
 
@@ -105,7 +108,7 @@
 ## [12.19.0] - 2026-02-22
 ### Added
 
-- Added `script` tool for programmatic multi-tool orchestration: write JavaScript that calls registered tools as async functions, with subprocess isolation, timeout control, and support for dynamically loaded MCP tools via the `tools` proxy
+### Added
 - Added `poll_jobs` tool to block until background jobs complete, providing an alternative to polling `read jobs://` in loops
 - Added `task.maxConcurrency` setting to limit the number of concurrently executing subagent tasks
 - Added support for rendering markdown output from Python cells with proper formatting and theme styling
@@ -119,7 +122,6 @@
 - Added clearer truncation notices across tools with consistent line/size context and continuation hints
 
 ### Changed
-
 - Updated bash and task tool guidance to recommend `poll_jobs` instead of polling `read jobs://` in loops when waiting for async results
 - Improved parallel task execution to schedule multiple background jobs independently instead of batching all tasks into a single job, enabling true concurrent execution
 - Enhanced task progress tracking to report per-task status (pending, running, completed, failed, aborted) with individual timing and token metrics for each background task
@@ -139,17 +141,15 @@
 - Updated internal artifact handling so tool output artifacts stay consistent across session switches and resumes
 
 ### Removed
-
 - Removed git context (branch, status, commit history) from system prompt — version control information is no longer injected into agent instructions
 
 ### Fixed
-
 - Fixed task progress display to hide tool count and token metrics when zero, reducing visual clutter in status output
 - Fixed Lobsters scraper to correctly parse API responses where user fields are strings instead of objects, resolving undefined user display in story listings
 - Fixed artifact manager caching to properly invalidate when session file changes, preventing stale artifact references
 - Fixed truncation behavior around UTF-8 boundaries and chunked output accounting
 - Fixed `submit_result` schema generation to use valid JSON Schema when no explicit output schema is provided
-
+- Fixed the ScriptTool worker loading so compiled Bun binaries write the embedded worker source before spawning, keeping the bridge operable at runtime
 ## [12.18.1] - 2026-02-21
 ### Added
 
