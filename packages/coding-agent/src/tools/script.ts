@@ -8,7 +8,7 @@
  * performs live tool lookups, so tools activated after startup (dynamic MCP
  * servers) are accessible through the `tools` proxy inside the script.
  *
- * See script-bridge.ts for the bridge server and script-worker.ts for the
+ * See script-bridge.ts for the bridge server and script-worker.txt for the
  * subprocess entry point.
  */
 import * as fs from "node:fs/promises";
@@ -21,6 +21,7 @@ import scriptDescription from "../prompts/tools/script.md" with { type: "text" }
 import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
 import type { ToolSession } from "./index";
 import { ToolBridgeServer } from "./script-bridge";
+import workerSource from "./script-worker.txt" with { type: "text" };
 import { ToolAbortError } from "./tool-errors";
 
 // ── Schema ────────────────────────────────────────────────────────────────────
@@ -96,6 +97,23 @@ function buildSafeEnv(bridgePort: number, scriptFile: string, bridgeSecret: stri
 	return env;
 }
 
+// ── Worker file (compiled-binary safe) ──────────────────────────────────────
+//
+// import.meta.dir resolves to /$bunfs/root/ inside a compiled Bun binary, where
+// script-worker.txt does not exist on the real filesystem. Instead, embed the
+// worker source as text at build time and write it to tmpdir lazily on first
+// use. Subsequent executions reuse the same path (content is immutable).
+
+const WORKER_FILE_PATH = path.join(os.tmpdir(), "omp-script-worker.ts");
+let workerReady: Promise<void> | null = null;
+
+function ensureWorkerFile(): Promise<void> {
+	if (!workerReady) {
+		workerReady = Bun.write(WORKER_FILE_PATH, workerSource).then(() => undefined);
+	}
+	return workerReady;
+}
+
 // ── ScriptTool ────────────────────────────────────────────────────────────────
 
 export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDetails> {
@@ -141,9 +159,8 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 			tmpFile = path.join(os.tmpdir(), `omp-script-${crypto.randomUUID()}.ts`);
 			await Bun.write(tmpFile, params.code);
 
-			const workerPath = path.join(import.meta.dir, "script-worker.ts");
-
-			const child = Bun.spawn(["bun", "run", workerPath], {
+			await ensureWorkerFile();
+			const child = Bun.spawn(["bun", "run", WORKER_FILE_PATH], {
 				env: buildSafeEnv(bridgePort, tmpFile, bridgeSecret),
 				stdout: "pipe",
 				stderr: "pipe",
