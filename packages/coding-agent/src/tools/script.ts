@@ -30,7 +30,7 @@ const scriptSchema = Type.Object({
 		description:
 			"JavaScript code to execute. Named async tool functions (bash, read, write, edit, grep, find, fetch, web_search, lsp, browser, …) are available directly. Use `await tools.name(args)` for MCP or dynamically loaded tools. Call `listTools()` to discover all available tools. Use `return` or `console.log` for output.",
 	}),
-	timeout: Type.Optional(Type.Number({ description: "Maximum execution time in seconds (default: 30)" })),
+	timeout: Type.Optional(Type.Number({ description: "Maximum execution time in seconds (default: 30)", minimum: 1 })),
 });
 
 type ScriptParams = Static<typeof scriptSchema>;
@@ -66,10 +66,11 @@ const EXCLUDED_TOOLS = new Set([
 // The subprocess can still use Bun's full API surface for filesystem / network
 // operations, but it cannot read secrets from the environment.
 
-function buildSafeEnv(bridgePort: number, scriptFile: string): Record<string, string> {
+function buildSafeEnv(bridgePort: number, scriptFile: string, bridgeSecret: string): Record<string, string> {
 	const env: Record<string, string> = {
 		OMP_BRIDGE_PORT: String(bridgePort),
 		OMP_SCRIPT_FILE: scriptFile,
+		OMP_BRIDGE_SECRET: bridgeSecret,
 	};
 	// Passthrough: minimal set needed for Bun to locate itself and basic OS ops.
 	// Intentionally does NOT include any key that looks like a secret.
@@ -130,10 +131,11 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 		};
 
 		const bridge = new ToolBridgeServer();
+		const bridgeSecret = crypto.randomUUID();
 		let tmpFile: string | null = null;
 
 		try {
-			const bridgePort = await bridge.start(getFilteredTools, effectiveSignal, context);
+			const bridgePort = bridge.start(getFilteredTools, effectiveSignal, bridgeSecret, context);
 
 			// Write the script code to an isolated temp file
 			tmpFile = path.join(os.tmpdir(), `omp-script-${crypto.randomUUID()}.ts`);
@@ -142,7 +144,7 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 			const workerPath = path.join(import.meta.dir, "script-worker.ts");
 
 			const child = Bun.spawn(["bun", "run", workerPath], {
-				env: buildSafeEnv(bridgePort, tmpFile),
+				env: buildSafeEnv(bridgePort, tmpFile, bridgeSecret),
 				stdout: "pipe",
 				stderr: "pipe",
 			});
@@ -161,7 +163,7 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 			// through onUpdate (same tail-buffered pattern as bash).
 			const stdoutParts: string[] = [];
 			const tailBuffer = new TailBuffer(DEFAULT_MAX_BYTES);
-			const decoder = new TextDecoder();
+			const stdoutDecoder = new TextDecoder();
 
 			const readStdoutStream = async () => {
 				const reader = (child.stdout as ReadableStream<Uint8Array>).getReader();
@@ -169,7 +171,7 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 					while (true) {
 						const { done, value } = await reader.read();
 						if (done) break;
-						const chunk = decoder.decode(value, { stream: true });
+						const chunk = stdoutDecoder.decode(value, { stream: true });
 						stdoutParts.push(chunk);
 						tailBuffer.append(chunk);
 						onUpdate?.({
@@ -177,7 +179,7 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 							details: { exitCode: undefined },
 						});
 					}
-					const tail = decoder.decode();
+					const tail = stdoutDecoder.decode();
 					if (tail) {
 						stdoutParts.push(tail);
 						tailBuffer.append(tail);
@@ -189,8 +191,31 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 				}
 			};
 
-			const [exitCode] = await Promise.all([child.exited, readStdoutStream()]);
+			// Drain stderr concurrently — not doing so allows the OS pipe buffer (~64KB)
+			// to fill and deadlock child.exited if the script writes large errors.
+			const stderrParts: string[] = [];
+			const stderrDecoder = new TextDecoder();
+
+			const readStderrStream = async () => {
+				const reader = (child.stderr as ReadableStream<Uint8Array>).getReader();
+				try {
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
+						stderrParts.push(stderrDecoder.decode(value, { stream: true }));
+					}
+					const tail = stderrDecoder.decode();
+					if (tail) stderrParts.push(tail);
+				} catch {
+					// Stream closed or aborted — ignore
+				} finally {
+					reader.releaseLock();
+				}
+			};
+
+			const [exitCode] = await Promise.all([child.exited, readStdoutStream(), readStderrStream()]);
 			const stdout = stdoutParts.join("");
+			const stderr = stderrParts.join("");
 
 			effectiveSignal.removeEventListener("abort", onAbort);
 			clearTimeout(timeoutHandle);
@@ -205,8 +230,6 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 					details: { exitCode: undefined },
 				};
 			}
-
-			const stderr = await new Response(child.stderr as ReadableStream).text();
 
 			logger.debug("Script execution complete", { exitCode, stdoutLen: stdout.length });
 
