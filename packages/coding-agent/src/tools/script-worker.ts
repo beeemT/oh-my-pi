@@ -19,9 +19,10 @@
 
 const BRIDGE_PORT = parseInt(Bun.env.OMP_BRIDGE_PORT ?? "0", 10);
 const SCRIPT_FILE = Bun.env.OMP_SCRIPT_FILE ?? "";
+const BRIDGE_SECRET = Bun.env.OMP_BRIDGE_SECRET ?? "";
 
-if (!BRIDGE_PORT || !SCRIPT_FILE) {
-	process.stderr.write("omp-script-worker: missing OMP_BRIDGE_PORT or OMP_SCRIPT_FILE\n");
+if (!BRIDGE_PORT || !SCRIPT_FILE || !BRIDGE_SECRET) {
+	process.stderr.write("omp-script-worker: missing OMP_BRIDGE_PORT, OMP_SCRIPT_FILE, or OMP_BRIDGE_SECRET\n");
 	process.exit(1);
 }
 
@@ -34,7 +35,7 @@ async function callBridge(name: string, args: unknown): Promise<string> {
 	try {
 		res = await fetch(`${BRIDGE_BASE}/tool/${encodeURIComponent(name)}`, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: { "Content-Type": "application/json", "X-Bridge-Token": BRIDGE_SECRET },
 			body: JSON.stringify(args ?? {}),
 		});
 	} catch (err) {
@@ -59,7 +60,7 @@ interface ToolInfo {
 }
 
 async function listTools(): Promise<ToolInfo[]> {
-	const res = await fetch(`${BRIDGE_BASE}/tools`);
+	const res = await fetch(`${BRIDGE_BASE}/tools`, { headers: { "X-Bridge-Token": BRIDGE_SECRET } });
 	if (!res.ok) throw new Error(`Failed to list tools: HTTP ${res.status}`);
 	return res.json() as Promise<ToolInfo[]>;
 }
@@ -117,8 +118,10 @@ async function main(): Promise<void> {
 	const paramNames = [...Object.keys(namedFns), "tools", "listTools"];
 	const paramValues: unknown[] = [...Object.values(namedFns), tools, listTools];
 
-	// Execute — new Function gives the code its own scope with only what we inject.
-	// The subprocess env already has no API keys or session secrets.
+	// Execute — new Function creates a new scope with only the injected parameters
+	// as named bindings, but does NOT sandbox globalThis: Bun, process, fetch, etc.
+	// are still reachable. The actual security boundary is the subprocess env
+	// (no API keys) and bridge-level schema validation on all tool calls.
 	const fn = new Function(...paramNames, `return (async () => {\n${code}\n})()`);
 
 	let returnValue: unknown;
