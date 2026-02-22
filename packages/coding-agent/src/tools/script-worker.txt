@@ -100,6 +100,19 @@ console.error = (...args: unknown[]) => logLines.push(args.map(a => String(a)).j
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
+// Names injected as top-level bindings; tool names that collide are
+// still reachable via the `tools` proxy.
+const INJECTED_NAMES = new Set(["tools", "listTools"]);
+
+// ECMAScript reserved words that cannot be formal parameter names.
+const JS_RESERVED = new Set([
+	"break","case","catch","class","const","continue","debugger","default",
+	"delete","do","else","enum","export","extends","false","finally","for",
+	"function","if","import","in","instanceof","let","new","null","return",
+	"static","super","switch","this","throw","true","try","typeof","undefined",
+	"var","void","while","with","yield","async","await",
+]);
+
 async function main(): Promise<void> {
 	// Fetch manifest for named closures (snapshot at startup for ergonomics)
 	const manifest = await listTools();
@@ -109,7 +122,9 @@ async function main(): Promise<void> {
 	for (const { name } of manifest) {
 		// Sanitise name to a valid JS identifier — MCP tool names are already
 		// snake_case (mcp_server_tool) so this is mostly a safety guard.
+		// Skip reserved words and injected names; tool stays accessible via the proxy.
 		const safe = name.replace(/[^a-zA-Z0-9_$]/g, "_");
+		if (JS_RESERVED.has(safe) || INJECTED_NAMES.has(safe)) continue;
 		namedFns[safe] = (args?: unknown) => callBridge(name, args ?? {});
 	}
 
