@@ -17,7 +17,7 @@
  *   stderr — uncaught errors; non-zero exit signals failure to the parent
  */
 
-const BRIDGE_PORT = parseInt(Bun.env.OMP_BRIDGE_PORT ?? "0");
+const BRIDGE_PORT = parseInt(Bun.env.OMP_BRIDGE_PORT ?? "0", 10);
 const SCRIPT_FILE = Bun.env.OMP_SCRIPT_FILE ?? "";
 
 if (!BRIDGE_PORT || !SCRIPT_FILE) {
