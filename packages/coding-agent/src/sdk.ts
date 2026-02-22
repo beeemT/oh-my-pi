@@ -1408,6 +1408,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		},
 	});
 	cursorEventEmitter = event => agent.emitExternalEvent(event);
+	// Wire live tool getter — ScriptTool reads this at execution time so the bridge
+	// always reflects the current agent.state.tools (including dynamically added MCP
+	// tools). Must be set after the agent is created since that's when the live list
+	// is established.
+	toolSession.getTools = () => agent.state.tools;
 
 	// Restore messages if session has existing data
 	if (hasExistingSession) {

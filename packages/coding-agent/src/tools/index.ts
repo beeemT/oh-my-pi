@@ -34,6 +34,7 @@ import { ReadTool } from "./read";
 import { RenderMermaidTool } from "./render-mermaid";
 import { ResolveTool } from "./resolve";
 import { reportFindingTool } from "./review";
+import { ScriptTool } from "./script";
 import { loadSshTool } from "./ssh";
 import { SubmitResultTool } from "./submit-result";
 import { type TodoPhase, TodoWriteTool } from "./todo-write";
@@ -69,6 +70,7 @@ export * from "./read";
 export * from "./render-mermaid";
 export * from "./resolve";
 export * from "./review";
+export * from "./script";
 export * from "./ssh";
 export * from "./submit-result";
 export * from "./todo-write";
@@ -151,6 +153,15 @@ export interface ToolSession {
 	getCheckpointState?: () => CheckpointState | undefined;
 	/** Set or clear active checkpoint state. */
 	setCheckpointState?: (state: CheckpointState | null) => void;
+	/**
+	 * Returns the currently active AgentTool instances for this session.
+	 *
+	 * Lazy getter rather than a static list: tools may be added dynamically
+	 * (e.g. MCP servers activated by a future tool_search tool) after the
+	 * ToolSession is constructed. ScriptTool reads this at execution time so
+	 * that the script bridge always reflects the live tool registry.
+	 */
+	getTools?: () => import("@oh-my-pi/pi-agent-core").AgentTool<any>[];
 }
 
 type ToolFactory = (session: ToolSession) => Tool | null | Promise<Tool | null>;
@@ -180,6 +191,7 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	fetch: s => new FetchTool(s),
 	web_search: s => new SearchTool(s),
 	write: s => new WriteTool(s),
+	script: ScriptTool.create,
 };
 
 export const HIDDEN_TOOLS: Record<string, ToolFactory> = {
