@@ -142,13 +142,15 @@ describe("ToolBridgeServer", () => {
 			...tool,
 			parameters: Type.Object({ required_field: Type.String() }),
 		};
-		const portStrict = new ToolBridgeServer().start(() => [strictTool], ac.signal, secret);
+		const strictBridge = new ToolBridgeServer();
+		const portStrict = strictBridge.start(() => [strictTool], ac.signal, secret);
 		const res = await fetch(`http://127.0.0.1:${portStrict}/tool/echo`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json", "X-Bridge-Token": secret },
 			body: JSON.stringify({}), // missing required_field
 		});
 		expect(res.status).toBe(422);
+		strictBridge.stop();
 		bridge.stop();
 	});
 

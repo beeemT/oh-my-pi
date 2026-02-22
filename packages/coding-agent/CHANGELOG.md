@@ -149,7 +149,6 @@
 - Fixed artifact manager caching to properly invalidate when session file changes, preventing stale artifact references
 - Fixed truncation behavior around UTF-8 boundaries and chunked output accounting
 - Fixed `submit_result` schema generation to use valid JSON Schema when no explicit output schema is provided
-- Fixed the ScriptTool worker loading so compiled Bun binaries write the embedded worker source before spawning, keeping the bridge operable at runtime
 ## [12.18.1] - 2026-02-21
 ### Added
 

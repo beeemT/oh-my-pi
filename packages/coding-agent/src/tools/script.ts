@@ -109,7 +109,12 @@ let workerReady: Promise<void> | null = null;
 
 function ensureWorkerFile(): Promise<void> {
 	if (!workerReady) {
-		workerReady = Bun.write(WORKER_FILE_PATH, workerSource).then(() => undefined);
+		workerReady = Bun.write(WORKER_FILE_PATH, workerSource)
+			.then(() => undefined)
+			.catch(err => {
+				workerReady = null; // allow retry on next call
+				throw err as Error;
+			});
 	}
 	return workerReady;
 }
