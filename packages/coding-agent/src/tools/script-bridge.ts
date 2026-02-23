@@ -7,6 +7,7 @@
 import type { AgentTool, AgentToolContext } from "@oh-my-pi/pi-agent-core";
 import { validateToolArguments } from "@oh-my-pi/pi-ai";
 import { logger } from "@oh-my-pi/pi-utils";
+import type { Server } from "bun";
 
 /** Tool descriptor returned by the /tools endpoint. */
 export interface BridgeToolInfo {
@@ -29,7 +30,7 @@ export interface BridgeToolInfo {
  * tools (e.g. MCP servers activated mid-script) are always accessible.
  */
 export class ToolBridgeServer {
-	#server: ReturnType<typeof Bun.serve> | null = null;
+	#server: Server | null = null;
 	#port = 0;
 
 	// port:0 lets the OS assign a free port atomically — no bind-close-rebind race.
