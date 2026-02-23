@@ -96,10 +96,8 @@ export class ToolBridgeServer {
 							undefined, // no streaming updates from bridge calls
 							context,
 						);
-						const content =
-							result.content.length > 0
-								? result.content.map(c => (c.type === "text" ? c.text : "")).join("\n")
-								: "";
+						const textBlocks = result.content.filter(c => c.type === "text");
+						const content = textBlocks.length > 0 ? textBlocks.map(c => c.text).join("\n") : "";
 						return Response.json({ content, isError: false });
 					} catch (err) {
 						// Surface abort as a recognisable message so the worker exits cleanly

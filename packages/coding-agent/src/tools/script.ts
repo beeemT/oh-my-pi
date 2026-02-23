@@ -104,7 +104,7 @@ function buildSafeEnv(bridgePort: number, scriptFile: string, bridgeSecret: stri
 // worker source as text at build time and write it to tmpdir lazily on first
 // use. Subsequent executions reuse the same path (content is immutable).
 
-const WORKER_FILE_PATH = path.join(os.tmpdir(), "omp-script-worker.ts");
+const WORKER_FILE_PATH = path.join(os.tmpdir(), `omp-script-worker-${crypto.randomUUID()}.ts`);
 let workerReady: Promise<void> | null = null;
 
 function ensureWorkerFile(): Promise<void> {
