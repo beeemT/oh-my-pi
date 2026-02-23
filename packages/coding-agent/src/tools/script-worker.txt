@@ -99,9 +99,11 @@ const origWarn = console.warn.bind(console);
 const origError = console.error.bind(console);
 
 /* eslint-disable no-console */
-console.log = (...args: unknown[]) => logLines.push(args.map(a => String(a)).join(" "));
-console.warn = (...args: unknown[]) => logLines.push(args.map(a => String(a)).join(" "));
-console.error = (...args: unknown[]) => logLines.push(args.map(a => String(a)).join(" "));
+const serialize = (a: unknown): string =>
+	a !== null && typeof a === "object" ? JSON.stringify(a, null, 2) : String(a);
+console.log = (...args: unknown[]) => logLines.push(args.map(serialize).join(" "));
+console.warn = (...args: unknown[]) => logLines.push(args.map(serialize).join(" "));
+console.error = (...args: unknown[]) => logLines.push(args.map(serialize).join(" "));
 /* eslint-enable no-console */
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -130,7 +132,7 @@ async function main(): Promise<void> {
 		// snake_case (mcp_server_tool) so this is mostly a safety guard.
 		// Skip reserved words and injected names; tool stays accessible via the proxy.
 		const safe = name.replace(/[^a-zA-Z0-9_$]/g, "_");
-		if (JS_RESERVED.has(safe) || INJECTED_NAMES.has(safe)) continue;
+		if (JS_RESERVED.has(safe) || INJECTED_NAMES.has(safe) || safe in namedFns) continue;
 		namedFns[safe] = (args?: unknown) => callBridge(name, args ?? {});
 	}
 
