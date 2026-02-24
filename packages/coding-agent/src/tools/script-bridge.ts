@@ -30,7 +30,7 @@ export interface BridgeToolInfo {
  * tools (e.g. MCP servers activated mid-script) are always accessible.
  */
 export class ToolBridgeServer {
-	#server: Server | null = null;
+	#server: Server<undefined> | null = null;
 	#port = 0;
 
 	// port:0 lets the OS assign a free port atomically — no bind-close-rebind race.
