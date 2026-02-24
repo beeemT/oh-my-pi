@@ -512,6 +512,15 @@ export const SETTINGS_SCHEMA = {
 			description: "Launch browser in headless mode (disable to show browser UI)",
 		},
 	},
+	"script.enabled": {
+		type: "boolean",
+		default: true,
+		ui: {
+			tab: "tools",
+			label: "Enable Script tool",
+			description: "Allow the agent to use the script tool for programmatic multi-tool orchestration",
+		},
+	},
 	"tools.intentTracing": {
 		type: "boolean",
 		default: true,

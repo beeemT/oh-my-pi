@@ -40,10 +40,15 @@ import { WriteTool } from "./write";
 export { exaTools } from "../exa";
 export type { ExaRenderDetails, ExaSearchResponse, ExaSearchResult } from "../exa/types";
 export {
-    getLspStatus, LspTool, warmupLspServers, type FileDiagnosticsResult,
-    type FileFormatResult, type LspServerStatus, type LspToolDetails,
-    type LspWarmupOptions,
-    type LspWarmupResult
+	type FileDiagnosticsResult,
+	type FileFormatResult,
+	getLspStatus,
+	type LspServerStatus,
+	LspTool,
+	type LspToolDetails,
+	type LspWarmupOptions,
+	type LspWarmupResult,
+	warmupLspServers,
 } from "../lsp";
 export { EditTool, type EditToolDetails } from "../patch";
 export * from "../session/streaming-output";
@@ -55,9 +60,9 @@ export { BashTool, type BashToolDetails, type BashToolInput, type BashToolOption
 export { BrowserTool, type BrowserToolDetails } from "./browser";
 export { CalculatorTool, type CalculatorToolDetails } from "./calculator";
 export { CancelJobTool, type CancelJobToolDetails } from "./cancel-job";
-export { ExitPlanModeTool, type ExitPlanModeDetails } from "./exit-plan-mode";
+export { type ExitPlanModeDetails, ExitPlanModeTool } from "./exit-plan-mode";
 export { FetchTool, type FetchToolDetails } from "./fetch";
-export { FindTool, type FindOperations, type FindToolDetails, type FindToolInput, type FindToolOptions } from "./find";
+export { type FindOperations, FindTool, type FindToolDetails, type FindToolInput, type FindToolOptions } from "./find";
 export { setPreferredImageProvider } from "./gemini-image";
 export { GrepTool, type GrepToolDetails, type GrepToolInput } from "./grep";
 export { NotebookTool, type NotebookToolDetails } from "./notebook";
@@ -65,11 +70,14 @@ export { PythonTool, type PythonToolDetails, type PythonToolOptions } from "./py
 export { ReadTool, type ReadToolDetails, type ReadToolInput } from "./read";
 export { reportFindingTool, type SubmitReviewDetails } from "./review";
 export { ScriptTool, type ScriptToolDetails } from "./script";
-export { loadSshTool, SshTool, type SSHToolDetails } from "./ssh";
+export { loadSshTool, type SSHToolDetails, SshTool } from "./ssh";
 export { SubmitResultTool } from "./submit-result";
 export {
-    getLatestTodoPhasesFromEntries, TodoWriteTool, type TodoItem,
-    type TodoPhase, type TodoWriteToolDetails
+	getLatestTodoPhasesFromEntries,
+	type TodoItem,
+	type TodoPhase,
+	TodoWriteTool,
+	type TodoWriteToolDetails,
 } from "./todo-write";
 export { WriteTool, type WriteToolDetails, type WriteToolInput } from "./write";
 
@@ -293,6 +301,7 @@ export async function createTools(session: ToolSession, toolNames?: string[]): P
 		if (name === "lsp") return session.settings.get("lsp.enabled");
 		if (name === "calc") return session.settings.get("calc.enabled");
 		if (name === "browser") return session.settings.get("browser.enabled");
+		if (name === "script") return session.settings.get("script.enabled");
 		if (name === "task") {
 			const maxDepth = session.settings.get("task.maxRecursionDepth") ?? 2;
 			const currentDepth = session.taskDepth ?? 0;
