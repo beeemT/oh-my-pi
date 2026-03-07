@@ -1,8 +1,8 @@
 # Changelog
 
 ## [Unreleased]
-### Breaking Changes
 
+### Breaking Changes
 - Changed `ThinkingLevel` type to be imported from `@oh-my-pi/pi-agent-core` instead of `@oh-my-pi/pi-ai`
 - Changed thinking level representation from string literals to `Effort` enum values (e.g., `Effort.High` instead of `"high"`)
 - Changed `getThinkingLevel()` return type to `ThinkingLevel | undefined` to support models without thinking support
@@ -10,7 +10,6 @@
 - Changed `thinkingLevel` in session context to be optional (`ThinkingLevel | undefined`) instead of always present
 
 ### Added
-
 - Added `thinking.ts` module with `getThinkingLevelMetadata()` and `resolveThinkingLevelForModel()` utilities for thinking level handling
 - Added `ThinkingConfig` support to model definitions for specifying supported thinking effort levels per model
 - Added `enrichModelThinking()` function to apply thinking configuration to models during registry initialization
@@ -24,9 +23,9 @@
 - Added fast mode indicator (⚡) to model segment in status line when priority service tier is active
 - Added context usage threshold levels (normal, warning, purple, error) with token-aware thresholds for better context awareness
 - Added `isFastModeEnabled()`, `setFastMode()`, and `toggleFastMode()` methods to AgentSession for fast mode control
+- Added `script` tool for programmatic multi-tool orchestration: write Python that calls registered tools as functions, with subprocess isolation, timeout control, and support for dynamically loaded MCP tools via the `tools` proxy
 
 ### Changed
-
 - Changed thinking level parsing to use `parseEffort()` from local thinking module instead of `parseThinkingLevel()` from pi-ai
 - Changed model list display to show supported thinking efforts (e.g., "low,medium,high") instead of yes/no reasoning indicator
 - Changed footer and status line to check `model.thinking` instead of `model.reasoning` for thinking level display
@@ -41,9 +40,9 @@
 - Changed session context to include `serviceTier` field for tracking active service tier across session branches
 - Changed `compact()` function to accept `remoteInstructions` option for custom remote compaction prompts
 - Changed model registry to apply hardcoded policies (gpt-5.4 context window) consistently across all model loading paths
+- Changed tool prompt to document Python syntax and idioms
 
 ### Fixed
-
 - Fixed OpenAI remote compaction to correctly append incremental responses instead of replacing entire history
 - Fixed thinking level display logic in main.ts to correctly check for undefined instead of "off"
 - Fixed model registry to preserve explicit thinking configuration on runtime-registered models
@@ -573,9 +572,6 @@
 - Merge failures (e.g. conflicting patches) are now non-fatal — agent output is preserved with `merge failed` status instead of `failed`
 - Stale branches are cleaned up when `commitToBranch` fails
 - Commit message generator filters lock files from diffs before AI summarization
-
-### Added
-- Added `script` tool for programmatic multi-tool orchestration: write JavaScript that calls registered tools as async functions, with subprocess isolation, timeout control, and support for dynamically loaded MCP tools via the `tools` proxy
 
 ## [13.2.1] - 2026-02-24
 

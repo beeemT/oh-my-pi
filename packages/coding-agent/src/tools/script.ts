@@ -1,8 +1,8 @@
 /**
- * ScriptTool — programmatic tool calling via a sandboxed JavaScript subprocess.
+ * ScriptTool — programmatic tool calling via an isolated raw Python subprocess.
  *
- * The model writes JavaScript code that calls other registered tools as async
- * functions. The code runs in a child Bun process that has no access to the
+ * The model writes Python code that calls other registered tools as regular
+ * functions. The code runs in a child Python process that has no access to the
  * parent's environment variables (API keys, auth tokens, etc.). Tool calls are
  * bridged via a short-lived localhost HTTP server (ToolBridgeServer) that
  * performs live tool lookups, so tools activated after startup (dynamic MCP
@@ -18,6 +18,7 @@ import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallb
 import { logger } from "@oh-my-pi/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import scriptDescription from "../prompts/tools/script.md" with { type: "text" };
+import { filterEnv, resolvePythonRuntime } from "../ipy/runtime";
 import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
 import type { ToolSession } from "./index";
 import { ToolBridgeServer } from "./script-bridge";
@@ -29,7 +30,7 @@ import { ToolAbortError } from "./tool-errors";
 const scriptSchema = Type.Object({
 	code: Type.String({
 		description:
-			"JavaScript code to execute. Named async tool functions (bash, read, write, edit, grep, find, fetch, web_search, lsp, browser, …) are available directly. Use `await tools.name(args)` for MCP or dynamically loaded tools. Call `listTools()` to discover all available tools. Use `return` or `console.log` for output.",
+			"Python code to execute. Named tool functions (bash, read, write, edit, grep, find, fetch, web_search, lsp, browser, …) are available directly when their names are valid Python identifiers. Use tools.name(args) for MCP or dynamically loaded tools. Call list_tools() to discover all available tools. Use print(...) for output and assign to global result to append a final value.",
 	}),
 	timeout: Type.Optional(Type.Number({ description: "Maximum execution time in seconds (default: 30)", minimum: 1 })),
 });
@@ -64,36 +65,22 @@ const EXCLUDED_TOOLS = new Set([
 // ── Safe environment for the subprocess ──────────────────────────────────────
 //
 // Deliberately excludes API keys, auth tokens, and session secrets.
-// The subprocess can still use Bun's full API surface for filesystem / network
-// operations, but it cannot read secrets from the environment.
+// The subprocess can still use the Python standard library and basic OS facilities,
+// but it cannot read secrets from the environment.
 
-function buildSafeEnv(bridgePort: number, scriptFile: string, bridgeSecret: string): Record<string, string> {
-	const env: Record<string, string> = {
-		OMP_BRIDGE_PORT: String(bridgePort),
-		OMP_SCRIPT_FILE: scriptFile,
-		OMP_BRIDGE_SECRET: bridgeSecret,
-	};
-	// Passthrough: minimal set needed for Bun to locate itself and basic OS ops.
-	// Intentionally does NOT include any key that looks like a secret.
-	const passthrough = [
-		"HOME",
-		"PATH",
-		"TMPDIR",
-		"TMP",
-		"TEMP",
-		"SHELL",
-		"LANG",
-		"LC_ALL",
-		"LC_CTYPE",
-		"USER",
-		"LOGNAME",
-		"BUN_INSTALL",
-		"BUN_RUNTIME_TRANSPILER_CACHE_PATH",
-	] as const;
-	for (const key of passthrough) {
-		const val = process.env[key];
-		if (val !== undefined) env[key] = val;
+function buildSafeEnv(
+	bridgePort: number,
+	scriptFile: string,
+	bridgeSecret: string,
+	pythonEnv: Record<string, string | undefined>,
+): Record<string, string> {
+	const env: Record<string, string> = {};
+	for (const [key, value] of Object.entries(filterEnv(pythonEnv))) {
+		if (typeof value === "string") env[key] = value;
 	}
+	env.OMP_BRIDGE_PORT = String(bridgePort);
+	env.OMP_SCRIPT_FILE = scriptFile;
+	env.OMP_BRIDGE_SECRET = bridgeSecret;
 	return env;
 }
 
@@ -104,7 +91,7 @@ function buildSafeEnv(bridgePort: number, scriptFile: string, bridgeSecret: stri
 // worker source as text at build time and write it to tmpdir lazily on first
 // use. Subsequent executions reuse the same path (content is immutable).
 
-const WORKER_FILE_PATH = path.join(os.tmpdir(), `omp-script-worker-${crypto.randomUUID()}.ts`);
+const WORKER_FILE_PATH = path.join(os.tmpdir(), `omp-script-worker-${crypto.randomUUID()}.py`);
 let workerReady: Promise<void> | null = null;
 
 function ensureWorkerFile(): Promise<void> {
@@ -161,12 +148,23 @@ export class ScriptTool implements AgentTool<typeof scriptSchema, ScriptToolDeta
 			const bridgePort = bridge.start(getFilteredTools, effectiveSignal, bridgeSecret, context);
 
 			// Write the script code to an isolated temp file
-			tmpFile = path.join(os.tmpdir(), `omp-script-${crypto.randomUUID()}.ts`);
+			tmpFile = path.join(os.tmpdir(), `omp-script-${crypto.randomUUID()}.py`);
 			await Bun.write(tmpFile, params.code);
+			let pythonRuntime: { pythonPath: string; env: Record<string, string | undefined> };
+			try {
+				pythonRuntime = resolvePythonRuntime(this.session.cwd, process.env);
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				return {
+					content: [{ type: "text", text: `Script execution failed: ${message}` }],
+					details: { exitCode: undefined },
+				};
+			}
 
 			await ensureWorkerFile();
-			const child = Bun.spawn(["bun", "run", WORKER_FILE_PATH], {
-				env: buildSafeEnv(bridgePort, tmpFile, bridgeSecret),
+			const child = Bun.spawn([pythonRuntime.pythonPath, WORKER_FILE_PATH], {
+				cwd: this.session.cwd,
+				env: buildSafeEnv(bridgePort, tmpFile, bridgeSecret, pythonRuntime.env),
 				stdout: "pipe",
 				stderr: "pipe",
 			});

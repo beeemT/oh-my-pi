@@ -10,8 +10,6 @@ function text(r: AgentToolResult): string {
 	return (r.content[0] as { type: "text"; text: string }).text;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function mockTool(name: string, fn: (params: Record<string, unknown>) => string): AgentTool<any> {
 	return {
 		name,
@@ -36,8 +34,6 @@ function createSession(tools: AgentTool<any>[] = []): ToolSession {
 	session.getTools = () => tools;
 	return session;
 }
-
-// ── ToolBridgeServer ──────────────────────────────────────────────────────────
 
 describe("ToolBridgeServer", () => {
 	it("allocates a port atomically without TOCTOU race", () => {
@@ -135,9 +131,7 @@ describe("ToolBridgeServer", () => {
 		const bridge = new ToolBridgeServer();
 		const secret = crypto.randomUUID();
 		const ac = new AbortController();
-		// echo requires 'input' (optional string) — send a non-string to trigger validation failure
 		const _port = bridge.start(() => [tool], ac.signal, secret);
-		// Override tool schema with a required field to force validation failure
 		const strictTool: AgentTool<any> = {
 			...tool,
 			parameters: Type.Object({ required_field: Type.String() }),
@@ -147,7 +141,7 @@ describe("ToolBridgeServer", () => {
 		const res = await fetch(`http://127.0.0.1:${portStrict}/tool/echo`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json", "X-Bridge-Token": secret },
-			body: JSON.stringify({}), // missing required_field
+			body: JSON.stringify({}),
 		});
 		expect(res.status).toBe(422);
 		strictBridge.stop();
@@ -176,8 +170,6 @@ describe("ToolBridgeServer", () => {
 		bridge.stop();
 	});
 });
-
-// ── ScriptTool ────────────────────────────────────────────────────────────────
 
 describe("ScriptTool schema", () => {
 	it("requires code parameter", () => {
@@ -227,105 +219,83 @@ describe("ScriptTool execution", () => {
 		return tool.execute("test", { code, timeout });
 	}
 
-	it("returns a value from return statement", async () => {
-		const r = await run(`return "alive"`);
+	it("returns global result value", async () => {
+		const r = await run(`result = "alive"`);
 		expect(text(r)).toBe("alive");
 		expect(r.details?.exitCode).toBe(0);
 	});
 
-	it("collects console.log output", async () => {
-		const r = await run(`console.log("line1"); console.log("line2")`);
+	it("collects print output", async () => {
+		const r = await run(`print("line1")\nprint("line2")`);
 		expect(text(r)).toBe("line1\nline2");
 	});
 
-	it("appends return value after console.log output", async () => {
-		const r = await run(`console.log("logged"); return "returned"`);
+	it("appends result after print output", async () => {
+		const r = await run(`print("logged")\nresult = "returned"`);
 		expect(text(r)).toBe("logged\nreturned");
 	});
 
 	it("calls named tool function", async () => {
-		const r = await run(`return await echo({ input: "hello" })`);
+		const r = await run(`result = echo({"input": "hello"})`);
 		expect(text(r)).toBe("echo:hello");
 	});
 
 	it("calls tool via tools proxy", async () => {
-		const r = await run(`return await tools.reverse({ input: "world" })`);
+		const r = await run(`result = tools.reverse({"input": "world"})`);
 		expect(text(r)).toBe("dlrow");
 	});
 
 	it("chains sequential tool calls", async () => {
-		const r = await run(`
-			const a = await echo({ input: "foo" });
-			const b = await reverse({ input: "bar" });
-			return [a, b].join("|");
-		`);
+		const r = await run(`a = echo({"input": "foo"})\nb = reverse({"input": "bar"})\nresult = "|".join([a, b])`);
 		expect(text(r)).toBe("echo:foo|rab");
 	});
 
-	it("executes parallel tool calls via Promise.all", async () => {
-		const r = await run(`
-			const results = await Promise.all(["a","b","c"].map(v => echo({ input: v })));
-			return results.join(",");
-		`);
-		expect(text(r)).toBe("echo:a,echo:b,echo:c");
-	});
-
-	it("listTools returns available tools", async () => {
-		const r = await run(`
-			const list = await listTools();
-			return list.map(t => t.name).sort().join(",");
-		`);
+	it("list_tools returns available tools", async () => {
+		const r = await run(`tools_list = list_tools()\nresult = ",".join(sorted(tool["name"] for tool in tools_list))`);
 		expect(text(r)).toContain("echo");
 		expect(text(r)).toContain("reverse");
 	});
 
-	it("script tool itself is excluded from listTools", async () => {
-		// ScriptTool adds itself to the session's getTools but bridge filters it out
+	it("script tool itself is excluded from list_tools", async () => {
 		const session = createSession([echoTool, new ScriptTool(createSession())]);
 		const t = new ScriptTool(session);
 		session.getTools = () => [echoTool, t];
 		const r = await t.execute("test", {
-			code: `const l = await listTools(); return l.some(x => x.name === "script") ? "exposed" : "excluded"`,
+			code: `tool_names = [tool["name"] for tool in list_tools()]\nresult = "exposed" if "script" in tool_names else "excluded"`,
 			timeout: 10,
 		});
 		expect(text(r)).toBe("excluded");
 	});
 
 	it("returns (no output) when script produces nothing", async () => {
-		const r = await run(`// silence`);
+		const r = await run(`# silence`);
 		expect(text(r)).toBe("(no output)");
 	});
 
-	it("surfaces tool errors as JS exceptions catchable in script", async () => {
-		const r = await run(`
-			try {
-				await tools.erroring({});
-				return "unreachable";
-			} catch (e) {
-				return "caught:" + e.message;
-			}
-		`);
+	it("surfaces tool errors as Python exceptions catchable in script", async () => {
+		const r = await run(
+			`try:\n    tools.erroring({})\n    result = "unreachable"\nexcept Exception as e:\n    result = "caught:" + str(e)`,
+		);
 		expect(text(r)).toBe("caught:always fails");
 	});
 
-	it("returns error text and non-zero exitCode on uncaught throw", async () => {
-		const r = await run(`throw new Error("boom")`);
+	it("returns error text and non-zero exitCode on uncaught exception", async () => {
+		const r = await run(`raise RuntimeError("boom")`);
 		expect(text(r)).toContain("boom");
 		expect(r.details?.exitCode).not.toBe(0);
 	});
 
 	it("handles large stderr without deadlocking (pipe buffer test)", async () => {
-		// Write >64KB directly to stderr; should not stall child.exited
 		const kb128 = "x".repeat(128 * 1024);
 		const start = Date.now();
-		const r = await run(`process.stderr.write(${JSON.stringify(kb128)}); return "done"`, 10);
+		const r = await run(`import sys\nsys.stderr.write(${JSON.stringify(kb128)})\nresult = "done"`, 10);
 		expect(text(r)).toBe("done");
 		expect(Date.now() - start).toBeLessThan(8000);
 	});
 
 	it("respects timeout and returns timeout message", async () => {
 		const start = Date.now();
-		const r = await run(`await new Promise(r => setTimeout(r, 60000))`, 2);
+		const r = await run(`import time\ntime.sleep(60)`, 2);
 		expect(text(r)).toContain("timed out");
 		expect(Date.now() - start).toBeLessThan(5000);
 	});
@@ -333,7 +303,7 @@ describe("ScriptTool execution", () => {
 	it("respects abort signal", async () => {
 		const ac = new AbortController();
 		const start = Date.now();
-		const p = tool.execute("test", { code: `await new Promise(r => setTimeout(r, 60000))`, timeout: 30 }, ac.signal);
+		const p = tool.execute("test", { code: `import time\ntime.sleep(60)`, timeout: 30 }, ac.signal);
 		await Bun.sleep(150);
 		ac.abort();
 		await expect(p).rejects.toThrow();
@@ -342,7 +312,7 @@ describe("ScriptTool execution", () => {
 
 	it("does not expose parent env secrets to subprocess", async () => {
 		Bun.env.OMP_TEST_SECRET_XYZ = "leaked";
-		const r = await run(`return Bun.env.OMP_TEST_SECRET_XYZ ?? "isolated"`, 5);
+		const r = await run(`import os\nresult = os.environ.get("OMP_TEST_SECRET_XYZ", "isolated")`, 5);
 		delete Bun.env.OMP_TEST_SECRET_XYZ;
 		expect(text(r)).toBe("isolated");
 	});
@@ -355,7 +325,7 @@ describe("ScriptTool execution", () => {
 		session.getTools = () => [echoTool, dynamicTool, t];
 
 		const r = await t.execute("test", {
-			code: `return await tools.dynamic_xyz({})`,
+			code: `result = tools.dynamic_xyz({})`,
 			timeout: 10,
 		});
 		expect(text(r)).toBe("dynamic-result");
